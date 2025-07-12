@@ -26,7 +26,7 @@ const MatriculasChart = () => {
     try {
       console.log("Fazendo requisição para API...");
       const response = await fetch(
-        `https://7b69deb3513b.ngrok-free.app/matriculas?inicio=${inicio}&fim=${fim}`,
+        ` https://bbb8bd10af35.ngrok-free.app/matriculas?inicio=${inicio}&fim=${fim}`,
         {
           method: "GET",
           headers: {
