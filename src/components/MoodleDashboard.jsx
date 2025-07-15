@@ -32,6 +32,19 @@ const MoodleDashboard = () => {
 
   const categories = [
     {
+        id: 'oferta',
+        title: 'Perfil da Oferta',
+        icon: BookOpen,
+        color: 'from-yellow-500 to-yellow-600',
+        description: 'Análise da oferta de cursos e matrículas',
+        metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
+        questions: [
+          { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
+          'Como estão distribuídas por campus/polos',
+          'Como estão distribuídas por cursos'
+        ]
+    },
+    {
       id: 'perfil',
       title: 'Perfil e Comportamento',
       icon: Users,
@@ -115,20 +128,7 @@ const MoodleDashboard = () => {
         'Percentual de acessos via móvel',
         'Problemas de performance reportados'
       ]
-    },
-    {
-        id: 'oferta',
-        title: 'Perfil da Oferta',
-        icon: BookOpen,
-        color: 'from-yellow-500 to-yellow-600',
-        description: 'Análise da oferta de cursos e matrículas',
-        metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
-        questions: [
-          { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
-          'Como estão distribuídas por campus/polos',
-          'Como estão distribuídas por cursos'
-        ]
-      }
+    }
   ];
 
   const quickStats = [
