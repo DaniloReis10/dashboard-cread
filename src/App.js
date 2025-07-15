@@ -1,12 +1,17 @@
-import React from 'react';
-import MatriculasChart from './components/MatriculasChart';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import MoodleDashboard from './components/MoodleDashboard';
+import TotalMatriculasPorAno from './components/TotalMatriculasPorAno';
 
 function App() {
   return (
-    <div className="App">
-      <h1>Matrículas por Ano</h1>
-      <MatriculasChart />
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<MoodleDashboard />} />
+          <Route path="/matriculas-por-ano" element={<TotalMatriculasPorAno />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
