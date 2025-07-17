@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 const MoodleDashboard = () => {
-  const [activeCategory, setActiveCategory] = useState('perfil');
+  const [activeCategory, setActiveCategory] = useState('oferta');
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
 
   const categories = [
