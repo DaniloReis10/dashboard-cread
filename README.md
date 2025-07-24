@@ -33,10 +33,20 @@ To get a local copy up and running follow these simple example steps.
    ```
    REACT_APP_API_URL=http://localhost:3000
    ```
-4. Start the development server
-    ```sh
-    npm start
-    ```
+  4. Start the development server
+      ```sh
+      npm start
+      ```
+
+### Running Tests
+
+After installing dependencies, you can run the test suite with:
+
+```sh
+CI=true npm test
+```
+
+This runs Jest once in a CI-friendly mode and ensures your changes don't break existing functionality.
 
 ## Project Structure
 
