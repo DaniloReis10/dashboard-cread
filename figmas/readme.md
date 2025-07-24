@@ -1,1 +1,1 @@
-created the folder to put figma interfaces
+Created the folder to store Figma interfaces.

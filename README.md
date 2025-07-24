@@ -47,7 +47,7 @@ To get a local copy up and running follow these simple example steps.
 │   └── ...
 ├── src/
 │   ├── components/
-│   │   └── MatriculasChart.jsx
+│   │   └── TotalMatriculasPorAno.jsx
 │   ├── App.js
 │   ├── index.js
 │   └── ...
