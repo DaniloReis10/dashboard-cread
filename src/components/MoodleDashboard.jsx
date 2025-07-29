@@ -40,6 +40,7 @@ const MoodleDashboard = () => {
         metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
         questions: [
           { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
+          { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
           'Como estão distribuídas por campus/polos',
           'Como estão distribuídas por cursos'
         ]
@@ -50,9 +51,11 @@ const MoodleDashboard = () => {
       icon: Users,
       color: 'from-blue-500 to-blue-600',
       description: 'Análise demográfica e comportamental dos alunos',
-      metrics: ['4.2k Alunos', '68% CE', '32% Outros Estados'],
+      metrics: ['4.2k Alunos','52% mulheres, solteiros,23 anos','1,1 salários minimos', '68% CE', '32% Outros Estados'],
       questions: [
         'Perfil demográfico dos alunos matriculados',
+        'Perfil por gênero, estado civil e idade',
+        'Perfil por faixa de renda',
         'Percentual de alunos de fora do Ceará',
         'Taxa de conclusão por perfil de aluno',
         'Relação entre perfil demográfico e evasão'
