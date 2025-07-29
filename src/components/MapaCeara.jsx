@@ -1,10 +1,10 @@
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { alunosPorMunicipio } from '../AlunosPorMunicipio';
 
-// Função para definir a cor com base no número de alunos
 const getColor = (alunos) => {
   if (alunos > 10000) return '#800026';
   if (alunos > 5000) return '#BD0026';
@@ -14,11 +14,9 @@ const getColor = (alunos) => {
   return '#FEB24C';
 };
 
-// Estilo aplicado a cada município
 const style = (feature) => {
   const nome = feature.properties.name || feature.properties.NM_MUN;
   const alunos = alunosPorMunicipio[nome] || 0;
-
   return {
     fillColor: getColor(alunos),
     weight: 1,
@@ -28,11 +26,9 @@ const style = (feature) => {
   };
 };
 
-// Evento para adicionar o tooltip em cada município
 const onEachFeature = (feature, layer) => {
   const nome = feature.properties.name || feature.properties.NM_MUN;
   const alunos = alunosPorMunicipio[nome] || 0;
-
   layer.bindTooltip(
     `Município: ${nome}<br>Alunos matriculados: ${alunos}`,
     {
@@ -46,10 +42,8 @@ const onEachFeature = (feature, layer) => {
 
 const Legend = () => {
   const map = useMap();
-
   useEffect(() => {
     const legend = L.control({ position: 'topright' });
-
     legend.onAdd = () => {
       const div = L.DomUtil.create('div', 'info legend');
       const grades = [0, 500, 1000, 2000, 5000, 10000];
@@ -58,17 +52,14 @@ const Legend = () => {
         const color = getColor(from + 1);
         return `<div><span style="display:inline-block;width:18px;height:18px;margin-right:8px;background:${color};border:1px solid #999"></span>${from}${to ? '&ndash;' + to : '+'}</div>`;
       });
-
       div.innerHTML = `<h4>Alunos matriculados</h4>${labels.join('')}`;
       return div;
     };
-
     legend.addTo(map);
     return () => {
       legend.remove();
     };
   }, [map]);
-
   return null;
 };
 
@@ -78,7 +69,13 @@ const MapaCeara = () => {
   const [anoFinal, setAnoFinal] = useState(new Date().getFullYear());
   const [curso, setCurso] = useState('Todos');
 
-  // Carregar arquivo GeoJSON com os limites dos municípios
+  const anosDisponiveis = Array.from({ length: 16 }, (_, i) => 2010 + i);
+
+  const municipios = Object.keys(alunosPorMunicipio);
+  const totalMunicipios = municipios.length;
+  const maxAlunos = Math.max(...Object.values(alunosPorMunicipio));
+  const minAlunos = Math.min(...Object.values(alunosPorMunicipio));
+
   useEffect(() => {
     fetch('/ceara_municipios.geojson')
       .then(res => res.json())
@@ -87,52 +84,83 @@ const MapaCeara = () => {
   }, []);
 
   return (
-    <div>
-      <div style={{ padding: '10px', backgroundColor: '#f9f9f9' }}>
-        <label>
-          Ano Inicial:
-          <input
-            type="number"
-            value={anoInicial}
-            onChange={(e) => setAnoInicial(Number(e.target.value))}
-            style={{ marginRight: '10px', marginLeft: '5px' }}
-          />
-        </label>
-        <label>
-          Ano Final:
-          <input
-            type="number"
-            value={anoFinal}
-            onChange={(e) => setAnoFinal(Number(e.target.value))}
-            style={{ marginRight: '10px', marginLeft: '5px' }}
-          />
-        </label>
-        <label>
-          Curso:
-          <select
-            value={curso}
-            onChange={(e) => setCurso(e.target.value)}
-            style={{ marginLeft: '5px' }}
-          >
-            <option value="Todos">Todos</option>
-            <option value="Informática">Informática</option>
-            <option value="Administração">Administração</option>
-            <option value="Enfermagem">Enfermagem</option>
-            {/* Adicione outros cursos conforme necessário */}
-          </select>
-        </label>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="text-center py-8">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-6 shadow-lg">
+          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text mb-4">Dashboard de Matrículas</h1>
+        <p className="text-xl text-slate-600 max-w-3xl mx-auto">Acompanhe os dados de matrículas por município com filtros interativos.</p>
+        <div className="mt-4">
+          <Link to="/" className="text-blue-500 hover:underline">&larr; Voltar para o Dashboard Principal</Link>
+        </div>
       </div>
 
-      <MapContainer center={[-5.2, -39.2]} zoom={7} style={{ height: '90vh', width: '100%' }}>
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 px-6">
+        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
+          <p className="text-sm text-slate-600 mb-1">Total de Municípios</p>
+          <p className="text-3xl font-bold text-purple-600">{totalMunicipios}</p>
+        </div>
+        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
+          <p className="text-sm text-slate-600 mb-1">Pico Máximo</p>
+          <p className="text-3xl font-bold text-green-600">{maxAlunos.toLocaleString()}</p>
+        </div>
+        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
+          <p className="text-sm text-slate-600 mb-1">Mínimo</p>
+          <p className="text-3xl font-bold text-red-600">{minAlunos.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto mb-6 px-6">
+        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-slate-700 mb-2">Ano Inicial</label>
+              <select
+                value={anoInicial}
+                onChange={(e) => setAnoInicial(Number(e.target.value))}
+                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                {anosDisponiveis.map((ano) => (
+                  <option key={ano} value={ano}>{ano}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-slate-700 mb-2">Ano Final</label>
+              <select
+                value={anoFinal}
+                onChange={(e) => setAnoFinal(Number(e.target.value))}
+                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                {anosDisponiveis.map((ano) => (
+                  <option key={ano} value={ano}>{ano}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-slate-700 mb-2">Curso</label>
+              <select
+                value={curso}
+                onChange={(e) => setCurso(e.target.value)}
+                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Todos">Todos</option>
+                <option value="Informática">Informática</option>
+                <option value="Administração">Administração</option>
+                <option value="Enfermagem">Enfermagem</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <MapContainer center={[-5.2, -39.2]} zoom={7} style={{ height: '80vh', width: '100%' }}>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {geoData && (
-          <GeoJSON
-            data={geoData}
-            style={style}
-            onEachFeature={onEachFeature}
-          />
+          <GeoJSON data={geoData} style={style} onEachFeature={onEachFeature} />
         )}
         <Legend />
       </MapContainer>
