@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MoodleDashboard from './components/MoodleDashboard';
 import TotalMatriculasPorAno from './components/TotalMatriculasPorAno';
 import MapaCeara from './components/MapaCeara';
+import MapaEstadosBrasil from './components/MapaEstadosBrasil';
 
 function App() {
     return ( <
@@ -19,6 +20,9 @@ function App() {
         /> <
         Route path = "/mapa-ceara"
         element = { < MapaCeara / > }
+        /> <
+        Route path = "/mapa-estados-brasil"
+        element = { < MapaEstadosBrasil / > }
         /> <
         /Routes> <
         /div> <

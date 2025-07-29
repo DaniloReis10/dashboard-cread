@@ -3,7 +3,11 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { alunosPorMunicipio } from '../AlunosPorMunicipio';
+import { alunosPorEstado } from '../AlunosPorEstado';
+
+function removerAcentos(str) {
+  return str.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
 
 const getColor = (alunos) => {
   if (alunos > 10000) return '#800026';
@@ -14,9 +18,13 @@ const getColor = (alunos) => {
   return '#FEB24C';
 };
 
+function normalizarNomeEstado(nome) {
+  return removerAcentos(nome.trim().toUpperCase());
+}
 const style = (feature) => {
-  const nome = feature.properties.name || feature.properties.NM_MUN;
-  const alunos = alunosPorMunicipio[nome] || 0;
+  const nomeOriginal = feature.properties.nome || feature.properties.name || feature.properties.sigla || feature.properties.NM_ESTADO;
+  const nome = normalizarNomeEstado(nomeOriginal);
+  const alunos = alunosPorEstado[nome] || 0;    
   return {
     fillColor: getColor(alunos),
     weight: 1,
@@ -27,14 +35,15 @@ const style = (feature) => {
 };
 
 const onEachFeature = (feature, layer) => {
-  const nome = feature.properties.name || feature.properties.NM_MUN;
-  const alunos = alunosPorMunicipio[nome] || 0;
+  const nomeOriginal = feature.properties.nome || feature.properties.name || feature.properties.sigla || feature.properties.NM_ESTADO;
+  const nome = normalizarNomeEstado(nomeOriginal);
+  const alunos = alunosPorEstado[nome] || 0;
   layer.bindTooltip(
-    `Município: ${nome}<br>Alunos matriculados: ${alunos}`,
+    `Estado: ${nomeOriginal}<br>Alunos matriculados: ${alunos}`,
     {
       sticky: true,
       direction: 'top',
-      className: 'tooltip-municipio',
+      className: 'tooltip-estado',
       opacity: 0.9
     }
   );
@@ -56,37 +65,39 @@ const Legend = () => {
       return div;
     };
     legend.addTo(map);
-    return () => {
-      legend.remove();
-    };
+    return () => legend.remove();
   }, [map]);
   return null;
 };
 
-const MapaCeara = () => {
+const MapaEstadosBrasil = () => {
   const [geoData, setGeoData] = useState(null);
   const [anoInicial, setAnoInicial] = useState(new Date().getFullYear() - 1);
   const [anoFinal, setAnoFinal] = useState(new Date().getFullYear());
   const [cursosSelecionados, setCursosSelecionados] = useState(['Todos']);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const cursosRef = useRef(null);
 
   const anosDisponiveis = Array.from({ length: 16 }, (_, i) => 2010 + i);
   const opcoesCursos = ['Informática', 'Administração', 'Enfermagem'];
+
+  useEffect(() => {
+    fetch('/brazil-states.geojson')
+      .then(res => res.json())
+      .then(data => setGeoData(data))
+      .catch(err => console.error('Erro ao carregar GeoJSON:', err));
+  }, []);
 
   const handleCursoCheckboxChange = (curso) => {
     if (curso === 'Todos') {
       setCursosSelecionados(['Todos']);
     } else {
-      let atualizados = cursosSelecionados.includes('Todos')
-        ? []
-        : [...cursosSelecionados];
-
+      let atualizados = cursosSelecionados.includes('Todos') ? [] : [...cursosSelecionados];
       if (atualizados.includes(curso)) {
         atualizados = atualizados.filter(c => c !== curso);
       } else {
         atualizados.push(curso);
       }
-
       if (atualizados.length === opcoesCursos.length) {
         setCursosSelecionados(['Todos']);
       } else {
@@ -94,12 +105,6 @@ const MapaCeara = () => {
       }
     }
   };
-
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
-
-  const cursosRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -113,28 +118,19 @@ const MapaCeara = () => {
     };
   }, []);
 
-  const municipios = Object.keys(alunosPorMunicipio);
-  const totalMunicipios = municipios.length;
-  const maxAlunos = Math.max(...Object.values(alunosPorMunicipio));
-  const minAlunos = Math.min(...Object.values(alunosPorMunicipio));
+  
 
-  useEffect(() => {
-    fetch('/ceara_municipios.geojson')
-      .then(res => res.json())
-      .then(data => setGeoData(data))
-      .catch(err => console.error('Erro ao carregar GeoJSON:', err));
-  }, []);
+
+  const estados = Object.keys(alunosPorEstado);
+  const totalEstados = estados.length;
+  const maxAlunos = Math.max(...Object.values(alunosPorEstado));
+  const minAlunos = Math.min(...Object.values(alunosPorEstado));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="text-center py-8">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-6 shadow-lg">
-          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        </div>
-        <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text mb-4">Matrículas por Municípios Ceará</h1>
-        <p className="text-xl text-slate-600 max-w-3xl mx-auto">Acompanhe os dados de matrículas por município com filtros interativos.</p>
+        <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text mb-4">Matrículas por Estados</h1>
+        <p className="text-xl text-slate-600 max-w-3xl mx-auto">Acompanhe os dados de matrículas por estado com filtros interativos.</p>
         <div className="mt-4">
           <Link to="/" className="text-blue-500 hover:underline">&larr; Voltar para o Dashboard Principal</Link>
         </div>
@@ -142,8 +138,8 @@ const MapaCeara = () => {
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 px-6 z-20 relative">
         <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
-          <p className="text-sm text-slate-600 mb-1">Total de Municípios</p>
-          <p className="text-3xl font-bold text-purple-600">{totalMunicipios}</p>
+          <p className="text-sm text-slate-600 mb-1">Total de Estados</p>
+          <p className="text-3xl font-bold text-purple-600">{totalEstados}</p>
         </div>
         <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
           <p className="text-sm text-slate-600 mb-1">Pico Máximo</p>
@@ -186,12 +182,10 @@ const MapaCeara = () => {
             <div className="flex flex-col relative" ref={cursosRef} style={{ zIndex: 1000 }}>
               <label className="text-sm font-medium text-slate-700 mb-2">Curso(s)</label>
               <button
-                onClick={toggleDropdown}
+                onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                {cursosSelecionados.includes('Todos')
-                  ? 'Todos os cursos'
-                  : `${cursosSelecionados.length} selecionado(s)`}
+                {cursosSelecionados.includes('Todos') ? 'Todos os cursos' : `${cursosSelecionados.length} selecionado(s)`}
               </button>
               {dropdownOpen && (
                 <div className="absolute z-50 top-full mt-2 bg-white border border-slate-300 rounded-xl shadow-lg py-2 px-4 max-h-48 overflow-y-auto space-y-1 w-64">
@@ -222,7 +216,7 @@ const MapaCeara = () => {
         </div>
       </div>
 
-      <MapContainer center={[-5.2, -39.2]} zoom={7} style={{ height: '80vh', width: '100%', zIndex: 0 }}>
+      <MapContainer center={[-14.235, -51.9253]} zoom={4} style={{ height: '80vh', width: '100%', zIndex: 0 }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {geoData && (
           <GeoJSON data={geoData} style={style} onEachFeature={onEachFeature} />
@@ -233,4 +227,4 @@ const MapaCeara = () => {
   );
 };
 
-export default MapaCeara;
+export default MapaEstadosBrasil;
