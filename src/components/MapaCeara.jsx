@@ -69,9 +69,19 @@ const MapaCeara = () => {
   const [anoFinal, setAnoFinal] = useState(new Date().getFullYear());
   const [cursosSelecionados, setCursosSelecionados] = useState(['Todos']);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [anosDisponiveis, setAnosDisponiveis] = useState([]);
 
-  const anosDisponiveis = Array.from({ length: 16 }, (_, i) => 2010 + i);
   const opcoesCursos = ['Informática', 'Administração', 'Enfermagem'];
+
+  useEffect(() => {
+    fetch('https://web-production-3163.up.railway.app/years_suap')
+      .then(res => res.json())
+      .then(data => {
+        const years = data.map(item => item.ano);
+        setAnosDisponiveis(years);
+      })
+      .catch(err => console.error('Erro ao carregar anos:', err));
+  }, []);
 
   const handleCursoCheckboxChange = (curso) => {
     if (curso === 'Todos') {
