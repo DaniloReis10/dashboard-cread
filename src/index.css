@@ -2,13 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .spin {
-    animation: spin 1s linear infinite;
-  }
+/* App.css */
 
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+@import url('https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css');
+@layer utilities {
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
 }
