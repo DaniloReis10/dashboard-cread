@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { alunosPorMunicipio } from '../AlunosPorMunicipio';
 
 const getColor = (alunos) => {
   if (alunos > 10000) return '#800026';
@@ -14,31 +13,13 @@ const getColor = (alunos) => {
   return '#FEB24C';
 };
 
-const style = (feature) => {
-  const nome = feature.properties.name || feature.properties.NM_MUN;
-  const alunos = alunosPorMunicipio[nome] || 0;
-  return {
-    fillColor: getColor(alunos),
-    weight: 1,
-    opacity: 1,
-    color: 'white',
-    fillOpacity: 0.7
-  };
-};
-
-const onEachFeature = (feature, layer) => {
-  const nome = feature.properties.name || feature.properties.NM_MUN;
-  const alunos = alunosPorMunicipio[nome] || 0;
-  layer.bindTooltip(
-    `Munícipio: ${nome}<br>Alunos matriculados: ${alunos}`,
-    {
-      sticky: true,
-      direction: 'top',
-      className: 'tooltip-municipio',
-      opacity: 0.9
-    }
-  );
-};
+const normalizarNome = (nome) =>
+  (nome || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace("-ce", "")
+    .trim();
 
 const Legend = () => {
   const map = useMap();
@@ -71,6 +52,9 @@ const MapaCeara = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [anosDisponiveis, setAnosDisponiveis] = useState([]);
   const [opcoesCursos, setOpcoesCursos] = useState([]);
+  const [alunosMunicipio, setAlunosMunicipio] = useState({});
+
+  const cursosRef = useRef(null);
 
   useEffect(() => {
     fetch('https://web-production-3163.up.railway.app/years_suap')
@@ -92,6 +76,41 @@ const MapaCeara = () => {
       .catch(err => console.error('Erro ao carregar cursos:', err));
   }, []);
 
+  useEffect(() => {
+    fetch('/ceara_municipios.geojson')
+      .then(res => res.json())
+      .then(data => setGeoData(data))
+      .catch(err => console.error('Erro ao carregar GeoJSON:', err));
+  }, []);
+
+  useEffect(() => {
+    const cursos = cursosSelecionados.includes('Todos') ? [] : cursosSelecionados;
+    const query = new URLSearchParams({
+      inicio: anoInicial,
+      fim: anoFinal,
+      cursos: cursos.join(',')
+    }).toString();
+
+    const url = `https://web-production-3163.up.railway.app/studentbycities?${query}`;
+    console.log("🔗 URL da requisição:", url);
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        console.log("📦 Dados recebidos do microserviço:", data);
+        const mapa = {};
+        data.forEach(item => {
+          const nome = normalizarNome(item.municipio);
+          mapa[nome] = item.total;
+        });
+        setAlunosMunicipio(mapa);
+      })
+      .catch(err => {
+        console.error("Erro ao buscar dados de alunos por município:", err);
+        setAlunosMunicipio({});
+      });
+  }, [anoInicial, anoFinal, cursosSelecionados]);
+
   const handleCursoCheckboxChange = (curso) => {
     if (curso === 'Todos') {
       setCursosSelecionados(['Todos']);
@@ -112,7 +131,6 @@ const MapaCeara = () => {
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
-  const cursosRef = useRef(null);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (cursosRef.current && !cursosRef.current.contains(event.target)) {
@@ -123,17 +141,34 @@ const MapaCeara = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const municipios = Object.keys(alunosPorMunicipio);
-  const totalMunicipios = municipios.length;
-  const maxAlunos = Math.max(...Object.values(alunosPorMunicipio));
-  const minAlunos = Math.min(...Object.values(alunosPorMunicipio));
+  const style = (feature) => {
+    const nomeRaw = feature.properties.name || feature.properties.NM_MUN;
+    const nome = normalizarNome(nomeRaw);
+    
+    const alunos = alunosMunicipio[nome] || 0;
+    return {
+      fillColor: getColor(alunos),
+      weight: 1,
+      opacity: 1,
+      color: 'white',
+      fillOpacity: 0.7
+    };
+  };
 
-  useEffect(() => {
-    fetch('/ceara_municipios.geojson')
-      .then(res => res.json())
-      .then(data => setGeoData(data))
-      .catch(err => console.error('Erro ao carregar GeoJSON:', err));
-  }, []);
+  const onEachFeature = (feature, layer) => {
+    const nomeRaw = feature.properties.name || feature.properties.NM_MUN;
+    const nome = normalizarNome(nomeRaw);
+    const alunos = alunosMunicipio[nome] || 0;
+    layer.bindTooltip(
+      `Município: ${nomeRaw}<br>Alunos matriculados: ${alunos}`,
+      {
+        sticky: true,
+        direction: 'top',
+        className: 'tooltip-municipio',
+        opacity: 0.9
+      }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -219,8 +254,13 @@ const MapaCeara = () => {
 
       <MapContainer center={[-5.2, -39.2]} zoom={7} style={{ height: '80vh', width: '100%', zIndex: 0 }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {geoData && (
-          <GeoJSON data={geoData} style={style} onEachFeature={onEachFeature} />
+        {geoData && Object.keys(alunosMunicipio).length > 0 && (
+          <GeoJSON
+            key={JSON.stringify(alunosMunicipio)}
+            data={geoData}
+            style={style}
+            onEachFeature={onEachFeature}
+          />
         )}
         <Legend />
       </MapContainer>
