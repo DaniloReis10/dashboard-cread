@@ -30,7 +30,7 @@ const onEachFeature = (feature, layer) => {
   const nome = feature.properties.name || feature.properties.NM_MUN;
   const alunos = alunosPorMunicipio[nome] || 0;
   layer.bindTooltip(
-    `Município: ${nome}<br>Alunos matriculados: ${alunos}`,
+    `Munícipio: ${nome}<br>Alunos matriculados: ${alunos}`,
     {
       sticky: true,
       direction: 'top',
@@ -70,8 +70,7 @@ const MapaCeara = () => {
   const [cursosSelecionados, setCursosSelecionados] = useState(['Todos']);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [anosDisponiveis, setAnosDisponiveis] = useState([]);
-
-  const opcoesCursos = ['Informática', 'Administração', 'Enfermagem'];
+  const [opcoesCursos, setOpcoesCursos] = useState([]);
 
   useEffect(() => {
     fetch('https://web-production-3163.up.railway.app/years_suap')
@@ -83,20 +82,26 @@ const MapaCeara = () => {
       .catch(err => console.error('Erro ao carregar anos:', err));
   }, []);
 
+  useEffect(() => {
+    fetch('https://web-production-3163.up.railway.app/courses')
+      .then(res => res.json())
+      .then(data => {
+        const nomes = data.cursos.map(curso => curso.nome).sort();
+        setOpcoesCursos(nomes);
+      })
+      .catch(err => console.error('Erro ao carregar cursos:', err));
+  }, []);
+
   const handleCursoCheckboxChange = (curso) => {
     if (curso === 'Todos') {
       setCursosSelecionados(['Todos']);
     } else {
-      let atualizados = cursosSelecionados.includes('Todos')
-        ? []
-        : [...cursosSelecionados];
-
+      let atualizados = cursosSelecionados.includes('Todos') ? [] : [...cursosSelecionados];
       if (atualizados.includes(curso)) {
         atualizados = atualizados.filter(c => c !== curso);
       } else {
         atualizados.push(curso);
       }
-
       if (atualizados.length === opcoesCursos.length) {
         setCursosSelecionados(['Todos']);
       } else {
@@ -105,12 +110,9 @@ const MapaCeara = () => {
     }
   };
 
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
+  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
   const cursosRef = useRef(null);
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (cursosRef.current && !cursosRef.current.contains(event.target)) {
@@ -118,9 +120,7 @@ const MapaCeara = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const municipios = Object.keys(alunosPorMunicipio);
@@ -147,21 +147,6 @@ const MapaCeara = () => {
         <p className="text-xl text-slate-600 max-w-3xl mx-auto">Acompanhe os dados de matrículas por município com filtros interativos.</p>
         <div className="mt-4">
           <Link to="/" className="text-blue-500 hover:underline">&larr; Voltar para o Dashboard Principal</Link>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 px-6 z-20 relative">
-        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
-          <p className="text-sm text-slate-600 mb-1">Total de Municípios</p>
-          <p className="text-3xl font-bold text-purple-600">{totalMunicipios}</p>
-        </div>
-        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
-          <p className="text-sm text-slate-600 mb-1">Pico Máximo</p>
-          <p className="text-3xl font-bold text-green-600">{maxAlunos.toLocaleString()}</p>
-        </div>
-        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
-          <p className="text-sm text-slate-600 mb-1">Mínimo</p>
-          <p className="text-3xl font-bold text-red-600">{minAlunos.toLocaleString()}</p>
         </div>
       </div>
 
