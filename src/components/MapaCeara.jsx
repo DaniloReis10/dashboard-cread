@@ -16,7 +16,7 @@ const getColor = (alunos) => {
 const normalizarNome = (nome) =>
   (nome || "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace("-ce", "")
     .trim();
@@ -144,7 +144,6 @@ const MapaCeara = () => {
   const style = (feature) => {
     const nomeRaw = feature.properties.name || feature.properties.NM_MUN;
     const nome = normalizarNome(nomeRaw);
-    
     const alunos = alunosMunicipio[nome] || 0;
     return {
       fillColor: getColor(alunos),
@@ -159,16 +158,19 @@ const MapaCeara = () => {
     const nomeRaw = feature.properties.name || feature.properties.NM_MUN;
     const nome = normalizarNome(nomeRaw);
     const alunos = alunosMunicipio[nome] || 0;
-    layer.bindTooltip(
-      `Município: ${nomeRaw}<br>Alunos matriculados: ${alunos}`,
-      {
-        sticky: true,
-        direction: 'top',
-        className: 'tooltip-municipio',
-        opacity: 0.9
-      }
-    );
+    layer.bindTooltip(`Município: ${nomeRaw}<br>Alunos matriculados: ${alunos}`, {
+      sticky: true,
+      direction: 'top',
+      className: 'tooltip-municipio',
+      opacity: 0.9
+    });
   };
+
+  const municipios = Object.keys(alunosMunicipio);
+  const totalMunicipios = municipios.length;
+  const totalAlunos = Object.values(alunosMunicipio).reduce((acc, val) => acc + val, 0);
+  const municipioMax = municipios.reduce((a, b) => alunosMunicipio[a] > alunosMunicipio[b] ? a : b, "");
+  const municipioMin = municipios.reduce((a, b) => alunosMunicipio[a] < alunosMunicipio[b] ? a : b, "");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -183,73 +185,92 @@ const MapaCeara = () => {
         <div className="mt-4">
           <Link to="/" className="text-blue-500 hover:underline">&larr; Voltar para o Dashboard Principal</Link>
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto mb-6 px-6 z-20 relative">
-        <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-slate-700 mb-2">Ano Inicial</label>
-              <select
-                value={anoInicial}
-                onChange={(e) => setAnoInicial(Number(e.target.value))}
-                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {anosDisponiveis.map((ano) => (
-                  <option key={ano} value={ano}>{ano}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-slate-700 mb-2">Ano Final</label>
-              <select
-                value={anoFinal}
-                onChange={(e) => setAnoFinal(Number(e.target.value))}
-                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {anosDisponiveis.map((ano) => (
-                  <option key={ano} value={ano}>{ano}</option>
-                ))}
-              </select>
-            </div>
+        {/* Cards informativos */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 px-4">
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Total de Municípios</div>
+            <div className="text-2xl font-bold text-slate-800">{totalMunicipios}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Total de Alunos</div>
+            <div className="text-2xl font-bold text-slate-800">{totalAlunos}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Município (Max)</div>
+            <div className="text-2xl font-bold text-slate-800">{municipioMax}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Município (Min)</div>
+            <div className="text-2xl font-bold text-slate-800">{municipioMin}</div>
+          </div>
+        </div>
 
-            <div className="flex flex-col relative" ref={cursosRef} style={{ zIndex: 1000 }}>
-              <label className="text-sm font-medium text-slate-700 mb-2">Curso(s)</label>
-              <button
-                onClick={toggleDropdown}
-                className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {cursosSelecionados.includes('Todos')
-                  ? 'Todos os cursos'
-                  : `${cursosSelecionados.length} selecionado(s)`}
-              </button>
-              {dropdownOpen && (
-                <div className="absolute z-50 top-full mt-2 bg-white border border-slate-300 rounded-xl shadow-lg py-2 px-4 max-h-48 overflow-y-auto space-y-1 w-64">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      value="Todos"
-                      checked={cursosSelecionados.includes('Todos')}
-                      onChange={() => handleCursoCheckboxChange('Todos')}
-                    />
-                    Todos
-                  </label>
-                  {opcoesCursos.map((curso) => (
-                    <label key={curso} className="flex items-center gap-2">
+        {/* Filtros de ano e curso */}
+        <div className="max-w-6xl  mx-auto mt-16 px-4 z-20 relative">
+          <div className="bg-white/70 rounded-2xl p-6 shadow border border-slate-200">
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700 mb-2">Ano Inicial</label>
+                <select
+                  value={anoInicial}
+                  onChange={(e) => setAnoInicial(Number(e.target.value))}
+                  className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {anosDisponiveis.map((ano) => (
+                    <option key={ano} value={ano}>{ano}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700 mb-2">Ano Final</label>
+                <select
+                  value={anoFinal}
+                  onChange={(e) => setAnoFinal(Number(e.target.value))}
+                  className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {anosDisponiveis.map((ano) => (
+                    <option key={ano} value={ano}>{ano}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col relative" ref={cursosRef} style={{ zIndex: 1000 }}>
+                <label className="text-sm font-medium text-slate-700 mb-2">Curso(s)</label>
+                <button
+                  onClick={toggleDropdown}
+                  className="bg-white border border-slate-300 rounded-xl py-2 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {cursosSelecionados.includes('Todos') ? 'Todos os cursos' : `${cursosSelecionados.length} selecionado(s)`}
+                </button>
+                {dropdownOpen && (
+                  <div className="absolute z-50 top-full mt-2 bg-white border border-slate-300 rounded-xl shadow-lg py-2 px-4 max-h-48 overflow-y-auto space-y-1 w-64">
+                    <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        value={curso}
-                        checked={cursosSelecionados.includes('Todos') || cursosSelecionados.includes(curso)}
-                        onChange={() => handleCursoCheckboxChange(curso)}
+                        value="Todos"
+                        checked={cursosSelecionados.includes('Todos')}
+                        onChange={() => handleCursoCheckboxChange('Todos')}
                       />
-                      {curso}
+                      Todos
                     </label>
-                  ))}
-                </div>
-              )}
+                    {opcoesCursos.map((curso) => (
+                      <label key={curso} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          value={curso}
+                          checked={cursosSelecionados.includes('Todos') || cursosSelecionados.includes(curso)}
+                          onChange={() => handleCursoCheckboxChange(curso)}
+                        />
+                        {curso}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
+
       </div>
 
       <MapContainer center={[-5.2, -39.2]} zoom={7} style={{ height: '80vh', width: '100%', zIndex: 0 }}>
