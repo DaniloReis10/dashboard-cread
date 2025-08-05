@@ -4,6 +4,37 @@ import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+const nomesEstados = {
+  ac: 'Acre',
+  al: 'Alagoas',
+  ap: 'Amapá',
+  am: 'Amazonas',
+  ba: 'Bahia',
+  ce: 'Ceará',
+  df: 'Distrito Federal',
+  es: 'Espírito Santo',
+  go: 'Goiás',
+  ma: 'Maranhão',
+  mt: 'Mato Grosso',
+  ms: 'Mato Grosso do Sul',
+  mg: 'Minas Gerais',
+  pa: 'Pará',
+  pb: 'Paraíba',
+  pr: 'Paraná',
+  pe: 'Pernambuco',
+  pi: 'Piauí',
+  rj: 'Rio de Janeiro',
+  rn: 'Rio Grande do Norte',
+  rs: 'Rio Grande do Sul',
+  ro: 'Rondônia',
+  rr: 'Roraima',
+  sc: 'Santa Catarina',
+  sp: 'São Paulo',
+  se: 'Sergipe',
+  to: 'Tocantins'
+};
+
+
 const URL_BASE_API = 'https://web-production-3163.up.railway.app';
 const URL_ALUNOS = `${URL_BASE_API}/studentbycities`;
 const URL_YEARS = `${URL_BASE_API}/years_suap`;
@@ -179,6 +210,13 @@ const MapaEstadosBrasil = () => {
     });
   };
 
+  const estados= Object.keys(alunosPorEstado);
+  const totalEstados = estados.length;
+  const totalAlunos = Object.values(alunosPorEstado).reduce((acc, val) => acc + val, 0);
+  const estadoMax = estados.reduce((a, b) => alunosPorEstado[a] > alunosPorEstado[b] ? a : b, "");
+  const estadoMin = estados.reduce((a, b) => alunosPorEstado[a] < alunosPorEstado[b] ? a : b, "");
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="text-center py-8">
@@ -193,6 +231,24 @@ const MapaEstadosBrasil = () => {
           <Link to="/" className="text-blue-500 hover:underline">&larr; Voltar para o Dashboard Principal</Link>
         </div>
       </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 px-4">
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Total de Estados</div>
+            <div className="text-2xl font-bold text-slate-800">{totalEstados}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Total de Alunos</div>
+            <div className="text-2xl font-bold text-slate-800">{totalAlunos}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Estado (Max)</div>
+            <div className="text-2xl font-bold text-slate-800">{nomesEstados[estadoMax] || estadoMax.toUpperCase()} ({alunosPorEstado[estadoMax]})</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-4 text-center">
+            <div className="text-sm text-slate-600">Estado (Min)</div>
+            <div className="text-2xl font-bold text-slate-800">{nomesEstados[estadoMin] || estadoMin.toUpperCase()} ({alunosPorEstado[estadoMin]})</div>
+          </div>
+        </div>
 
       {/* Filtros */}
       <div className="max-w-6xl mx-auto mt-6 px-4 z-20 relative">
