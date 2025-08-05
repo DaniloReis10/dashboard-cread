@@ -3,8 +3,10 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-const URL_BASE_API = 'http://localhost:8000';
+// Development URL_BASE_API should be set to the local development server
+// const URL_BASE_API = 'http://localhost:8000';
+// Production URL_BASE_API should be set to the actual deployed URL
+const URL_BASE_API = 'https://web-production-3163.up.railway.app';
 const URL_ALUNOS = `${URL_BASE_API}/studentbycities`;
 const URL_YEARS = `${URL_BASE_API}/years_suap`;
 const URL_COURSES = `${URL_BASE_API}/courses`;
