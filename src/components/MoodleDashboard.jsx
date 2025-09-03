@@ -42,7 +42,7 @@ const MoodleDashboard = () => {
           { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
           { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
           { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
-          'Como estão distribuídas por campus/polos',
+          { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
           'Como estão distribuídas por cursos'
         ]
     },
