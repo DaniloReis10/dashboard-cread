@@ -3,7 +3,7 @@ import MoodleDashboard from './components/MoodleDashboard';
 import TotalMatriculasPorAno from './components/TotalMatriculasPorAno';
 import MapaCeara from './components/MapaCeara';
 import MapaEstadosBrasil from './components/MapaEstadosBrasil';
-import EADPoloChart from './polo-dashboard-ead';
+import PoloDashboardPage from './PoloDashboardPage.tsx';
 
 function App() {
     return ( <
@@ -25,7 +25,7 @@ function App() {
         Route path = "/mapa-estados-brasil"
         element = { < MapaEstadosBrasil / > }
         />
-         <Route path="/polo-dashboard-ead" element={<EADPoloChart />} /> 
+         <Route path="/polo-dashboard-ead" element={<PoloDashboardPage />} /> 
         <
         /Routes> <
         /div> <
