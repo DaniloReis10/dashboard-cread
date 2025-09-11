@@ -43,7 +43,8 @@ const MoodleDashboard = () => {
           { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
           { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
           'Como estão distribuídas por campus/polos',
-          'Como estão distribuídas por cursos'
+          'Como estão distribuídas por cursos',
+          'Como estão distribuídas as conclusões por ano'
         ]
     },
     {
