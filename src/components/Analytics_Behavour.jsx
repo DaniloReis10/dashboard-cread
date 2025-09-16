@@ -236,258 +236,372 @@ export default function Analytics_Behavour() {
   };
 
   const Card = ({ title, value, subtitle, variant = "default" }) => (
-    <div className="bg-white rounded-2xl shadow p-5">
-      <a
-        href="/"
-        className="sr-only"
-      >
-        {/* acessibilidade: anchor escondido para navegação rápida por teclado */}
-        voltar
-      </a>
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-1 text-3xl font-bold">{loading ? "…" : value}</div>
-      {subtitle && (
-        <div
-          className={
-            "mt-1 text-sm font-medium " +
-            (variant === "success"
-              ? "text-emerald-600"
-              : variant === "danger"
-              ? "text-rose-600"
-              : "text-slate-600")
-          }
-        >
-          {subtitle}
+    <div className="relative bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-slate-100 overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      
+      <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+        {variant === "success" ? (
+          <svg className="w-8 h-8 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+        ) : variant === "danger" ? (
+          <svg className="w-8 h-8 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+      </div>
+
+      <div className="relative z-10">
+        <div className="text-sm font-medium text-slate-500 mb-2">{title}</div>
+        <div className="text-3xl font-bold text-slate-800 mb-1">
+          {loading ? (
+            <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+          ) : (
+            value
+          )}
         </div>
-      )}
+        {subtitle && (
+          <div
+            className={`text-sm font-medium ${
+              variant === "success"
+                ? "text-emerald-600"
+                : variant === "danger"
+                ? "text-rose-600"
+                : "text-slate-600"
+            }`}
+          >
+            {subtitle}
+          </div>
+        )}
+      </div>
     </div>
   );
 
   // ===================== Render =====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Link de retorno */}
-      <div className="max-w-7xl mx-auto px-4 pt-6">
-        <a
-          href="/"
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 hover:underline"
-        >
-          <span aria-hidden>←</span> Voltar para o Dashboard Principal
-        </a>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+      <div className="fixed inset-0 opacity-30">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.1) 0%, transparent 50%), 
+                           radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)`
+        }}></div>
       </div>
 
-      {/* Header */}
-      <div className="text-center py-6">
-        <h1 className="text-3xl font-bold text-slate-800">
-          Analytics de Comportamento — Acessos por Dia e Hora
-        </h1>
-        <p className="text-slate-600 mt-2">
-          Intervalo: {dataInicial} → {dataFinal}
-        </p>
-      </div>
-
-      {/* KPIs */}
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card title="Total de Acessos" value={totalAcessos.toLocaleString("pt-BR")} />
-        <Card title="Média por Dia" value={mediaAcessosPorDia.toLocaleString("pt-BR")} />
-        <Card
-          title="Dia com Mais Acesso"
-          value={diaComMaisAcesso.label || "-"}
-          subtitle={`(${(diaComMaisAcesso.total || 0).toLocaleString("pt-BR")} acessos)`}
-          variant="success"
-        />
-        <Card
-          title="Dia com Menos Acesso"
-          value={diaComMenosAcesso.label || "-"}
-          subtitle={`(${(diaComMenosAcesso.total || 0).toLocaleString("pt-BR")} acessos)`}
-          variant="danger"
-        />
-      </div>
-
-      {/* Filtros (único card) */}
-      <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-2xl shadow p-5">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
-            {/* Data inicial */}
-            <div>
-              <label className="block text-sm text-slate-500 mb-1">Data Inicial</label>
-              <input
-                type="date"
-                className="w-full border rounded-lg p-2"
-                value={dataInicial}
-                onChange={(e) => setDataInicial(e.target.value)}
-              />
-            </div>
-
-            {/* Data final */}
-            <div>
-              <label className="block text-sm text-slate-500 mb-1">Data Final</label>
-              <input
-                type="date"
-                className="w-full border rounded-lg p-2"
-                value={dataFinal}
-                onChange={(e) => setDataFinal(e.target.value)}
-              />
-            </div>
-
-            {/* Cursos (dropdown de múltipla seleção) */}
-            <div className="relative" ref={cursosRef}>
-              <label className="block text-sm text-slate-500 mb-1">Curso(s)</label>
-              <button
-                className="border rounded-lg px-3 py-2 w-full text-left"
-                onClick={() => setDropdownCursosOpen((v) => !v)}
+      <div className="relative z-10">
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 text-white">
+          <div className="max-w-7xl mx-auto px-4 pt-8 pb-12">
+            <div className="mb-6">
+              <a
+                href="/"
+                className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors duration-200 group"
               >
-                {cursosSelecionados.includes("Todos")
-                  ? "Todos os cursos"
-                  : `${cursosSelecionados.length} selecionado(s)`}
-              </button>
-              {dropdownCursosOpen && (
-                <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto border bg-white rounded-lg shadow">
-                  {opcoesCursos.map((nome) => (
-                    <label
-                      key={nome}
-                      className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={
-                          cursosSelecionados.includes("Todos")
-                            ? nome === "Todos"
-                            : cursosSelecionados.includes(nome)
-                        }
-                        onChange={() => handleCursoCheckboxChange(nome)}
-                      />
-                      <span>{nome}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+                <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1 duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="font-medium">Voltar para o Dashboard Principal</span>
+              </a>
             </div>
 
-            {/* Campus/Polo */}
-            <div className="relative" ref={campusRef}>
-              <label className="block text-sm text-slate-500 mb-1">Campus/Polo</label>
-              <button
-                className="border rounded-lg px-3 py-2 w-full text-left"
-                onClick={() => setDropdownCampusOpen((v) => !v)}
-              >
-                {campusSelecionado}
-              </button>
-              {dropdownCampusOpen && (
-                <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto border bg-white rounded-lg shadow">
-                  {opcoesCampus.map((nome) => (
-                    <button
-                      key={nome}
-                      className="w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-slate-50"
-                      onClick={() => {
-                        setCampusSelecionado(nome);
-                        setDropdownCampusOpen(false);
-                      }}
-                    >
-                      {nome}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Tipo */}
-            <div>
-              <label className="block text-sm text-slate-500 mb-1">Tipo</label>
-              <select
-                className="w-full border rounded-lg p-2"
-                value={tipoLocal}
-                onChange={(e) => setTipoLocal(e.target.value)}
-              >
-                <option value="campus">Campus</option>
-                <option value="polo">Polo</option>
-              </select>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h1 className="text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-100">
+                Analytics de Comportamento
+              </h1>
+              <h2 className="text-xl font-medium text-white/90 mb-4">
+                Acessos por Dia e Hora
+              </h2>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/80">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {new Date(dataInicial).toLocaleDateString('pt-BR')} → {new Date(dataFinal).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Gráfico por dia (barras) */}
-      <div className="max-w-7xl mx-auto px-4 mt-8">
-        <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Acessos por Dia da Semana
-            </h2>
-            <span className="text-sm text-slate-500">
-              Clique em um dia para focar no gráfico de horários
-            </span>
+        <div className="max-w-7xl mx-auto px-4 -mt-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <Card 
+              title="Total de Acessos" 
+              value={totalAcessos.toLocaleString("pt-BR")} 
+            />
+            <Card 
+              title="Média por Dia" 
+              value={mediaAcessosPorDia.toLocaleString("pt-BR")} 
+            />
+            <Card
+              title="Dia com Mais Acesso"
+              value={diaComMaisAcesso.label || "-"}
+              subtitle={`${(diaComMaisAcesso.total || 0).toLocaleString("pt-BR")} acessos`}
+              variant="success"
+            />
+            <Card
+              title="Dia com Menos Acesso"
+              value={diaComMenosAcesso.label || "-"}
+              subtitle={`${(diaComMenosAcesso.total || 0).toLocaleString("pt-BR")} acessos`}
+              variant="danger"
+            />
           </div>
-
-          <ResponsiveContainer width="100%" height={340}>
-            <BarChart
-              data={dadosAcesso}
-              onClick={(e) => {
-                const x = e && e.activeLabel;
-                if (!x) return;
-                const key = normalize(String(x));
-                if (ORDEM_DIAS.includes(key)) setDiaSelecionado(key);
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={(d) => d.label || d.dia} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="minimo" name="Mínimo" fill="#8884d8" />
-              <Bar dataKey="medio" name="Médio" fill="#82ca9d" />
-              <Bar dataKey="maximo" name="Máximo" fill="#ffc658" />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
-      </div>
 
-      {/* Gráfico por hora do dia selecionado (seletor aqui) */}
-      <div className="max-w-7xl mx-auto px-4 mt-8 mb-12">
-        <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Distribuição por Hora
-            </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Dia:</span>
-              <select
-                className="border rounded-lg p-2"
-                value={diaSelecionado}
-                onChange={(e) => setDiaSelecionado(e.target.value)}
-              >
-                {ORDEM_DIAS.map((d) => (
-                  <option key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </option>
-                ))}
-              </select>
+        <div className="max-w-7xl mx-auto px-4 mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">Filtros de Análise</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Data Inicial</label>
+                <input
+                  type="date"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
+                  value={dataInicial}
+                  onChange={(e) => setDataInicial(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Data Final</label>
+                <input
+                  type="date"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
+                  value={dataFinal}
+                  onChange={(e) => setDataFinal(e.target.value)}
+                />
+              </div>
+
+              <div className="relative" ref={cursosRef}>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Curso(s)</label>
+                <button
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm text-left hover:border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 flex items-center justify-between"
+                  onClick={() => setDropdownCursosOpen((v) => !v)}
+                >
+                  <span>
+                    {cursosSelecionados.includes("Todos")
+                      ? "Todos os cursos"
+                      : `${cursosSelecionados.length} selecionado(s)`}
+                  </span>
+                  <svg className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${dropdownCursosOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {dropdownCursosOpen && (
+                  <div className="absolute z-20 mt-2 w-full max-h-64 overflow-auto border border-slate-200 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl">
+                    {opcoesCursos.map((nome) => (
+                      <label
+                        key={nome}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors duration-150 cursor-pointer border-b border-slate-100 last:border-b-0"
+                      >
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={
+                            cursosSelecionados.includes("Todos")
+                              ? nome === "Todos"
+                              : cursosSelecionados.includes(nome)
+                          }
+                          onChange={() => handleCursoCheckboxChange(nome)}
+                        />
+                        <span className="text-sm font-medium text-slate-700">{nome}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={campusRef}>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Campus/Polo</label>
+                <button
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm text-left hover:border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 flex items-center justify-between"
+                  onClick={() => setDropdownCampusOpen((v) => !v)}
+                >
+                  <span>{campusSelecionado}</span>
+                  <svg className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${dropdownCampusOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {dropdownCampusOpen && (
+                  <div className="absolute z-20 mt-2 w-full max-h-64 overflow-auto border border-slate-200 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl">
+                    {opcoesCampus.map((nome) => (
+                      <button
+                        key={nome}
+                        className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors duration-150 border-b border-slate-100 last:border-b-0"
+                        onClick={() => {
+                          setCampusSelecionado(nome);
+                          setDropdownCampusOpen(false);
+                        }}
+                      >
+                        <span className="text-sm font-medium text-slate-700">{nome}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Tipo</label>
+                <select
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
+                  value={tipoLocal}
+                  onChange={(e) => setTipoLocal(e.target.value)}
+                >
+                  <option value="campus">Campus</option>
+                  <option value="polo">Polo</option>
+                </select>
+              </div>
             </div>
           </div>
+        </div>
 
-          <ResponsiveContainer width="100%" height={340}>
-            <LineChart data={dadosHorarios}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="horario" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="acessos"
-                name="Acessos"
-                stroke="#8884d8"
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="media"
-                name="Média"
-                stroke="#82ca9d"
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="max-w-7xl mx-auto px-4 mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-slate-800">
+                  Acessos por Dia da Semana
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-full">
+                <svg className="w-4 h-4 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 001-1v-1a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span className="text-xs font-medium text-indigo-700">
+                  Clique para focar horários
+                </span>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart
+                data={dadosAcesso}
+                onClick={(e) => {
+                  const x = e && e.activeLabel;
+                  if (!x) return;
+                  const key = normalize(String(x));
+                  if (ORDEM_DIAS.includes(key)) setDiaSelecionado(key);
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey={(d) => d.label || d.dia} 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="minimo" name="Mínimo" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="medio" name="Médio" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="maximo" name="Máximo" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 mb-12">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-slate-800">
+                  Distribuição por Hora
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600">Dia:</span>
+                <select
+                  className="border border-slate-200 rounded-xl px-3 py-2 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
+                  value={diaSelecionado}
+                  onChange={(e) => setDiaSelecionado(e.target.value)}
+                >
+                  {ORDEM_DIAS.map((d) => (
+                    <option key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={340}>
+              <LineChart data={dadosHorarios}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="horario" 
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  interval={1}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="acessos"
+                  name="Acessos"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, fill: '#1d4ed8' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="media"
+                  name="Média"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
