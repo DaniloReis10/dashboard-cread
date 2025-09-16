@@ -70,7 +70,7 @@ const MoodleDashboard = () => {
       description: 'Padrões de uso e interação na plataforma',
       metrics: ['2.1h Média/Sessão', '18h-22h Pico', '85% Móvel'],
       questions: [
-        'Horários e dias de maior acesso',
+        { text: 'Horários e dias de maior acesso', link: '/analytics-behavour' },
         'Recursos mais utilizados na plataforma',
         'Tempo médio de acesso por sessão',
         'Percentual de acesso nos primeiros 7/30 dias',
