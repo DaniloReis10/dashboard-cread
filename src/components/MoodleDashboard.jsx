@@ -44,7 +44,7 @@ const MoodleDashboard = () => {
           { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
           'Como estão distribuídas por campus/polos',
           'Como estão distribuídas por cursos',
-          'Como estão distribuídas as conclusões por ano'
+          { text: 'Como estão distribuídas as conclusões por ano', link: '/student-dashboard' },
         ]
     },
     {

@@ -1,484 +1,535 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import Papa from 'papaparse';
+import React, { useState, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Download, FileText, BarChart3, PieChart, Layers, Settings, Filter, RotateCcw, Search, CheckCircle, Menu } from 'lucide-react';
 
 const StudentDashboard = () => {
-  const [studentData, setStudentData] = useState([]);
-  const [yearData, setYearData] = useState([]);
-  const [abcData, setAbcData] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [availableYears, setAvailableYears] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('menu');
-  
-  // Filtros globais
-  const [selectedCourse, setSelectedCourse] = useState('todos');
-  const [startYear, setStartYear] = useState(2020);
-  const [endYear, setEndYear] = useState(2025);
+  const [filters, setFilters] = useState({
+    anoInicial: '2010',
+    anoFinal: '2024',
+    curso: 'Todos',
+    campus: 'Todos',
+    modalidade: 'Todos',
+    periodo: 'Todos',
+    search: ''
+  });
 
-  // Paleta de cores verde
-  const greenColors = ['#10B981', '#059669', '#1d755cff', '#344a44ff', '#064E3B', '#022C22'];
+  const [activeChart, setActiveChart] = useState('Barras');
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Dados completos do gráfico por curso e campus
+  const completeData = [
+    { year: '2010', value: 20, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Matutino' },
+    { year: '2011', value: 40, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Matutino' },
+    { year: '2012', value: 65, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Vespertino' },
+    { year: '2013', value: 80, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Matutino' },
+    { year: '2014', value: 75, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Noturno' },
+    { year: '2015', value: 95, curso: 'Administração', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Noturno' },
+    { year: '2016', value: 130, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Híbrido', periodo: 'Vespertino' },
+    { year: '2017', value: 145, curso: 'Administração', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Noturno' },
+    { year: '2018', value: 170, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Matutino' },
+    { year: '2019', value: 160, curso: 'Informática', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Vespertino' },
+    { year: '2020', value: 180, curso: 'Administração', campus: 'Fortaleza', modalidade: 'EAD', periodo: 'Noturno' },
+    { year: '2021', value: 200, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Híbrido', periodo: 'Matutino' },
+    { year: '2022', value: 220, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Vespertino' },
+    { year: '2023', value: 210, curso: 'Administração', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Noturno' },
+    { year: '2024', value: 240, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Híbrido', periodo: 'Matutino' }
+  ];
 
-  const loadData = async () => {
-    try {
-      // Dados estudantes
-      const studentsCsvData = `ID,Matricula,Ano de Ingresso,Campus,Cidade,Idade,Estado_Residencia,CPF,course_id,course_shortname
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,1937.0,INTRODUÇÃO AO TURISMO
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,1981.0,ASPECTOS SOCIOCULTURAIS
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2178.0,PROCEDIMENTOS ADMINISTRATIVOS
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2179.0,ASPECTOS CULTURAIS
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2317.0,LINGUAGEM E COMUNICAÇÃO
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2347.0,LEGISLAÇÃO APLICADA
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2425.0,GESTÃO FINANCEIRA
-16,202112410390311,2021,GUARAMIRANGA,BATURITE,23.54,Ceará,075.369.653-38,2447.0,CRIATIVIDADE E RECREAÇÃO
-34,202012410330355,2020,GUARAMIRANGA,FORTALEZA,31.47,Ceará,792.352.123-91,2367.0,CAPACITAÇÃO PROFISSIONAL
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1993.0,ASPECTOS LEGAIS
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1994.0,COMUNICAÇÃO E REDAÇÃO
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1995.0,EMPREENDEDORISMO
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1996.0,GESTÃO DE PESSOAS
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1997.0,INGLÊS INSTRUMENTAL
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1998.0,INTRODUÇÃO À ADMINISTRAÇÃO
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,1999.0,MATEMÁTICA BÁSICA
-54,20242242030251,2024,GUARAMIRANGA,GUARAMIRANGA,39.83,Ceará,017.618.913-08,506.0,Coordenação de Curso
-54,20242242030251,2024,GUARAMIRANGA,FORTALEZA,24.98,Ceará,017.618.913-08,2369.0,INFORMÁTICA APLICADA
-87,20251242030001,2025,GUARAMIRANGA,FORTALEZA,24.98,Ceará,083.900.943-71,2869.0,Aspectos Legais de Gestão Empresarial
-87,20251242030001,2025,GUARAMIRANGA,FORTALEZA,24.98,Ceará,083.900.943-71,2857.0,Matemática Básica e Lógica`;
+  // Função para filtrar e agrupar os dados
+  const filteredData = useMemo(() => {
+    let filtered = completeData.filter(item => {
+      const year = parseInt(item.year);
+      const anoInicial = parseInt(filters.anoInicial);
+      const anoFinal = parseInt(filters.anoFinal);
+      
+      const yearInRange = year >= anoInicial && year <= anoFinal;
+      const cursoMatch = filters.curso === 'Todos' || item.curso === filters.curso;
+      const campusMatch = filters.campus === 'Todos' || item.campus === filters.campus;
+      const modalidadeMatch = filters.modalidade === 'Todos' || item.modalidade === filters.modalidade;
+      const periodoMatch = filters.periodo === 'Todos' || item.periodo === filters.periodo;
+      
+      const searchMatch = filters.search === '' || 
+        item.curso.toLowerCase().includes(filters.search.toLowerCase()) ||
+        item.campus.toLowerCase().includes(filters.search.toLowerCase());
+      
+      return yearInRange && cursoMatch && campusMatch && modalidadeMatch && periodoMatch && searchMatch;
+    });
 
-      // Dados dos anos
-      const yearsCsvData = `Ano de Ingresso,Frequência Absoluta,Frequência Relativa (%)
-2024,6248,27.966519
-2025,3125,13.987736
-2023,3057,13.683362
-2022,2282,10.214404
-2021,1748,7.82418
-2020,1389,6.217269
-2019,948,4.243319
-2018,724,3.240679
-2017,648,2.900497
-2016,426,1.906808
-2015,291,1.302538
-2013,262,1.172732
-2014,212,0.948928
-2012,199,0.890739
-2011,144,0.644555
-2010,118,0.528177
-2008,88,0.393895
-2009,82,0.367038
-2007,56,0.25066
-2005,44,0.196947
-2006,44,0.196947
-2004,41,0.183519
-2003,36,0.161139
-2002,25,0.111902
-1995,19,0.085045
-2001,18,0.080569
-2000,14,0.062665
-1998,14,0.062665
-1996,14,0.062665
-1999,12,0.053713
-1997,6,0.026856
-1950,2,0.008952
-1977,1,0.004476
-1985,1,0.004476
-1984,1,0.004476
-1993,1,0.004476
-1994,1,0.004476`;
-
-      // Dados ABC
-      const abcCsvData = `course_shortname,Frequência Absoluta,Frequência Relativa (%),Percentual Acumulado (%),Classe ABC
-5594. 2024/2 - 621100 - CAPACITAÇÃO PROFISSIONAL EM SISTEMAS EMBARCADOS,962,1.533288,1.533288,A
-4987. 2024/1 - 592304 - DISCIPLINA PRÁTICA,396,0.631166,2.164454,A
-4980. 2024/1 - 592305 - INTRODUÇÃO AO DESENVOLVIMENTO IOS,394,0.627979,2.792432,A
-4783. 2024/1 - 583685 - INTRODUÇÃO DA ADMINISTRAÇÃO,36,0.057379,50.113961,B
-6091. 2025/1 - 643529 - PROTÓTIPO DE SOFTWARE,22,0.035065,80.016257,C
-4878. 2024/1 - 584457 - DESENVOLVIMENTO WEB III,1,0.001594,100.0,C`;
-
-      const parsedStudents = Papa.parse(studentsCsvData, { header: true, dynamicTyping: true, skipEmptyLines: true });
-      const parsedYears = Papa.parse(yearsCsvData, { header: true, dynamicTyping: true, skipEmptyLines: true });
-      const parsedAbc = Papa.parse(abcCsvData, { header: true, dynamicTyping: true, skipEmptyLines: true });
-
-      setStudentData(parsedStudents.data);
-      setYearData(parsedYears.data);
-      setAbcData(parsedAbc.data);
-
-      const uniqueCourses = [...new Set(parsedStudents.data.map(item => item.course_shortname))].filter(Boolean);
-      setCourses(uniqueCourses.sort());
-
-      const years = parsedYears.data.map(item => item['Ano de Ingresso']).filter(Boolean).sort((a, b) => b - a);
-      setAvailableYears(years);
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      setLoading(false);
-    }
-  };
-
-  const getFilteredYearData = () => {
-    let filtered = yearData.filter(item => 
-      item['Ano de Ingresso'] >= startYear && item['Ano de Ingresso'] <= endYear
-    );
-
-    if (selectedCourse !== 'todos') {
-      const courseStudents = studentData.filter(student => student.course_shortname === selectedCourse);
-      const courseYears = courseStudents.reduce((acc, student) => {
-        const year = student['Ano de Ingresso'];
-        acc[year] = (acc[year] || 0) + 1;
-        return acc;
-      }, {});
-
-      filtered = Object.entries(courseYears)
-        .filter(([year]) => year >= startYear && year <= endYear)
-        .map(([year, count]) => ({
-          'Ano de Ingresso': parseInt(year),
-          'Frequência Absoluta': count,
-          'Frequência Relativa (%)': 0
-        }));
-    }
-
-    return filtered.sort((a, b) => a['Ano de Ingresso'] - b['Ano de Ingresso']);
-  };
-
-  const getAbcChartData = () => {
-    const classGroups = abcData.reduce((acc, item) => {
-      const classe = item['Classe ABC'];
-      if (!acc[classe]) {
-        acc[classe] = { classe, cursos: 0, frequencia: 0 };
+    // Agrupa por ano e soma os valores
+    const grouped = filtered.reduce((acc, item) => {
+      const existing = acc.find(g => g.year === item.year);
+      if (existing) {
+        existing.value += item.value;
+      } else {
+        acc.push({ year: item.year, value: item.value });
       }
-      acc[classe].cursos += 1;
-      acc[classe].frequencia += item['Frequência Absoluta'];
       return acc;
-    }, {});
+    }, []);
 
-    return Object.values(classGroups).sort((a, b) => a.classe.localeCompare(b.classe));
+    // Ordena por ano
+    return grouped.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+  }, [filters]);
+
+  // Calcula estatísticas dinâmicas baseadas nos dados filtrados
+  const dynamicStats = useMemo(() => {
+    const totalStudents = filteredData.reduce((sum, item) => sum + item.value, 0);
+    const avgGrowth = filteredData.length > 1 ? 
+      ((filteredData[filteredData.length - 1]?.value - filteredData[0]?.value) / filteredData[0]?.value * 100).toFixed(1) : 0;
+    const peakYear = filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 });
+    const yearsSpan = filteredData.length;
+
+    return [
+      { 
+        title: `${filters.anoInicial}-${filters.anoFinal}`, 
+        percentage: `${avgGrowth}% crescimento médio`, 
+        color: '#22c55e',
+        icon: <CheckCircle className="w-6 h-6" />
+      },
+      { 
+        title: peakYear.year, 
+        percentage: `Pico: ${peakYear.value} conclusões`, 
+        color: '#3b82f6',
+        icon: <FileText className="w-6 h-6" />
+      },
+      { 
+        title: filters.curso, 
+        percentage: `${totalStudents} total conclusões`, 
+        color: '#8b5cf6',
+        icon: <BarChart3 className="w-6 h-6" />
+      },
+      { 
+        title: `${yearsSpan} anos`, 
+        percentage: `Período analisado`, 
+        color: '#10b981',
+        icon: <Settings className="w-6 h-6" />
+      }
+    ];
+  }, [filteredData, filters]);
+
+  // Função para resetar filtros
+  const resetFilters = () => {
+    setFilters({
+      anoInicial: '2010',
+      anoFinal: '2024',
+      curso: 'Todos',
+      campus: 'Todos',
+      modalidade: 'Todos',
+      periodo: 'Todos',
+      search: ''
+    });
   };
 
-  const MenuPrincipal = () => (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Dashboard de Análise de Estudantes</h1>
-          <p className="text-lg text-gray-600">Selecione uma análise para visualizar os dados</p>
+  // Conta filtros ativos
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.anoInicial !== '2010' || filters.anoFinal !== '2024') count++;
+    if (filters.curso !== 'Todos') count++;
+    if (filters.campus !== 'Todos') count++;
+    if (filters.modalidade !== 'Todos') count++;
+    if (filters.periodo !== 'Todos') count++;
+    if (filters.search !== '') count++;
+    return count;
+  }, [filters]);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <nav className="flex items-center space-x-8">
+            <button className="text-gray-700 hover:text-gray-900 font-medium">Campi</button>
+            <button className="text-gray-700 hover:text-gray-900 font-medium">Institucional</button>
+            <button className="text-gray-700 hover:text-gray-900 font-medium">Acesso à Informação</button>
+            <button className="text-gray-700 hover:text-gray-900 font-medium">Contatos</button>
+          </nav>
+          <div className="flex items-center space-x-4 text-gray-600">
+            <button className="hover:text-gray-900">contrast</button>
+            <button className="hover:text-gray-900">🌙 dark_mode</button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Title Section */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-green-700 mb-2">
+            Distribuição de Conclusão por Ano
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Acompanhe a distribuição de conclusão por anos específicos.
+          </p>
+          <button className="text-blue-500 hover:underline">
+            ← Voltar para o Dashboard Principal
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Card Análise Temporal */}
-          <div 
-            onClick={() => setCurrentView('temporal')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-l-4 border-green-500 hover:border-green-600"
-          >
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Análise Temporal</h3>
-              <p className="text-gray-600">Visualize a evolução de ingressos por ano com filtros de período e curso</p>
+        {/* Filters Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+              <Filter className="w-5 h-5 mr-2" />
+              Configurações e Filtros
+              {activeFiltersCount > 0 && (
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {activeFiltersCount} ativo{activeFiltersCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </h2>
+            <button 
+              onClick={resetFilters}
+              className="flex items-center text-gray-500 hover:text-gray-700"
+            >
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Restaurar
+            </button>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Buscar curso ou campus..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md bg-gray-50"
+                value={filters.search}
+                onChange={(e) => setFilters({...filters, search: e.target.value})}
+              />
+            </div>
+          </div>
+          
+          {/* Filter Dropdowns */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ano Inicial 
+                <span className="text-blue-600 font-normal">({filters.anoInicial})</span>
+              </label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.anoInicial}
+                onChange={(e) => setFilters({...filters, anoInicial: e.target.value})}
+              >
+                {Array.from({length: 15}, (_, i) => 2010 + i).map(year => (
+                  <option key={year} value={year.toString()}>{year}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ano Final 
+                <span className="text-blue-600 font-normal">({filters.anoFinal})</span>
+              </label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.anoFinal}
+                onChange={(e) => setFilters({...filters, anoFinal: e.target.value})}
+              >
+                {Array.from({length: 15}, (_, i) => 2010 + i).map(year => (
+                  <option key={year} value={year.toString()}>{year}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Card Análise ABC */}
-          <div 
-            onClick={() => setCurrentView('abc')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-l-4 border-green-500 hover:border-green-600"
-          >
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Classificação ABC</h3>
-              <p className="text-gray-600">Análise de cursos por classe ABC baseada na frequência de estudantes</p>
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.curso}
+                onChange={(e) => setFilters({...filters, curso: e.target.value})}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Informática">Informática</option>
+                <option value="Engenharia">Engenharia</option>
+                <option value="Administração">Administração</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Campus</label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.campus}
+                onChange={(e) => setFilters({...filters, campus: e.target.value})}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Fortaleza">Fortaleza</option>
+                <option value="Maracanaú">Maracanaú</option>
+                <option value="Caucaia">Caucaia</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Modalidade</label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.modalidade}
+                onChange={(e) => setFilters({...filters, modalidade: e.target.value})}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Presencial">Presencial</option>
+                <option value="EAD">EAD</option>
+                <option value="Híbrido">Híbrido</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.periodo}
+                onChange={(e) => setFilters({...filters, periodo: e.target.value})}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Matutino">Matutino</option>
+                <option value="Vespertino">Vespertino</option>
+                <option value="Noturno">Noturno</option>
+              </select>
             </div>
           </div>
 
-          {/* Card Distribuição Geográfica */}
-          <div 
-            onClick={() => setCurrentView('geografica')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-l-4 border-green-500 hover:border-green-600"
-          >
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Distribuição Geográfica</h3>
-              <p className="text-gray-600">Visualize a distribuição de estudantes por cidade e campus</p>
+          {/* Chart Type Selector */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Gráfico</label>
+            <div className="flex space-x-2 flex-wrap">
+              {[
+                { name: 'Barras', icon: BarChart3 },
+                { name: 'Pizza', icon: PieChart },
+                { name: 'Linha', icon: FileText },
+                { name: 'Área', icon: Layers },
+                { name: 'Dispersão', icon: Settings },
+                { name: 'Composto', icon: BarChart3 }
+              ].map((type) => (
+                <button
+                  key={type.name}
+                  onClick={() => setActiveChart(type.name)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeChart === type.name 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <type.icon className="w-4 h-4" />
+                  <span>{type.name}</span>
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Export Options */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center">
+              <input type="checkbox" id="mostrar-comparacao" className="mr-2" />
+              <label htmlFor="mostrar-comparacao" className="text-sm text-gray-700">
+                Mostrar Comparação
+              </label>
+            </div>
+            <div className="flex space-x-3">
+              <button className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-200">
+                <Download className="w-4 h-4" />
+                <span className="text-sm font-medium">CSV</span>
+              </button>
+              <button className="flex items-center space-x-1 px-3 py-2 text-green-600 hover:bg-green-50 rounded-md border border-green-200">
+                <FileText className="w-4 h-4" />
+                <span className="text-sm font-medium">JSON</span>
+              </button>
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-3">
+            Filtros ativos: {activeFiltersCount === 0 ? 'Nenhum filtro aplicado' : `${activeFiltersCount} filtro(s) aplicado(s)`}
+            {filteredData.length > 0 && (
+              <span className="ml-2 text-green-600">
+                • {filteredData.reduce((sum, item) => sum + item.value, 0)} conclusões encontradas
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {dynamicStats.map((card, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center">
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center mr-2"
+                    style={{ backgroundColor: card.color }}
+                  >
+                    <div className="text-white">
+                      {card.icon}
+                    </div>
+                  </div>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                </div>
+              </div>
+              <div className="text-xl font-bold text-gray-900 mb-1">{card.title}</div>
+              <div className="text-sm text-green-600">{card.percentage}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Chart Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              Gráfico - Período: {filters.anoInicial} a {filters.anoFinal}
+            </h3>
+            <div className="text-sm text-gray-600">
+              {filteredData.length} ano{filteredData.length !== 1 ? 's' : ''} exibido{filteredData.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+          
+          {filteredData.length === 0 ? (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">Nenhum dado encontrado</p>
+                <p className="text-sm">Tente ajustar os filtros para ver mais dados</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="year" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value, name) => [`${value} conclusões`, 'Total']}
+                    labelFormatter={(label) => `Ano: ${label}`}
+                  />
+                  <Bar 
+                    dataKey="value" 
+                    fill="#10b981" 
+                    radius={[4, 4, 0, 0]}
+                    barSize={Math.min(40, Math.max(20, 400 / filteredData.length))}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Detailed Metrics - Agora baseadas nos dados filtrados */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Métricas dos Dados Filtrados</h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Total de Conclusões</div>
+              <div className="text-xl font-bold mb-1 text-gray-900">
+                {filteredData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Período Analisado</span>
+                <span className="text-sm font-medium text-green-600">
+                  {filteredData.length} ano{filteredData.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Média por Ano</div>
+              <div className="text-xl font-bold mb-1 text-gray-900">
+                {filteredData.length > 0 ? 
+                  Math.round(filteredData.reduce((sum, item) => sum + item.value, 0) / filteredData.length) : 0
+                }
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Conclusões/Ano</span>
+                <span className="text-sm font-medium text-green-600">Média</span>
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Maior Ano</div>
+              <div className="text-xl font-bold mb-1 text-gray-900">
+                {filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 }).year}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Pico</span>
+                <span className="text-sm font-medium text-green-600">
+                  {filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 }).value}
+                </span>
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Crescimento</div>
+              <div className="text-xl font-bold mb-1 text-gray-900">
+                {filteredData.length > 1 ? 
+                  `${((filteredData[filteredData.length - 1]?.value - filteredData[0]?.value) / filteredData[0]?.value * 100).toFixed(1)}%` 
+                  : 'N/A'
+                }
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Período Total</span>
+                <span className="text-sm font-medium text-green-600">
+                  {filteredData.length > 1 ? 'Crescimento' : 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Copyright Notice */}
+        <div className="text-center mb-8">
+          <p className="text-gray-500 text-sm">
+            © 2025 Dashboard de Matrículas. Dados atualizados em tempo real.
+          </p>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-6">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <h4 className="text-lg font-semibold text-gray-800 mb-2">
+            Instituto Federal de Educação, Ciência<br />
+            e Tecnologia do Estado do Ceará
+          </h4>
+          <p className="text-sm text-gray-600 mb-1">
+            Rua Jorge Dumar, 1703 - Jardim América - Fortaleza-CE
+          </p>
+          <p className="text-sm text-gray-600 mb-1">
+            <strong>CEP:</strong> 60410-426
+          </p>
+          <p className="text-sm text-gray-600 mb-1">
+            <strong>E-mail:</strong> reitoria@ifce.edu.br
+          </p>
+          <p className="text-sm text-gray-600">
+            <strong>Telefone:</strong> (85) 3401 2300
+          </p>
+        </div>
+      </footer>
     </div>
   );
-
-  const AnaliseTemporalView = () => {
-    const filteredData = getFilteredYearData();
-    const totalStudents = filteredData.reduce((sum, item) => sum + item['Frequência Absoluta'], 0);
-    const avgPerYear = Math.round(totalStudents / filteredData.length) || 0;
-
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Análise Temporal</h1>
-            <button 
-              onClick={() => setCurrentView('menu')}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-            >
-              ← Voltar ao Menu
-            </button>
-          </div>
-
-          {/* Filtros */}
-          <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Filtros</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ano Inicial</label>
-                <select
-                  value={startYear}
-                  onChange={(e) => setStartYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ano Final</label>
-                <select
-                  value={endYear}
-                  onChange={(e) => setEndYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Curso</label>
-                <select
-                  value={selectedCourse}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="todos">Todos os Cursos</option>
-                  {courses.map(course => (
-                    <option key={course} value={course}>{course}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Total de Estudantes</h3>
-              <p className="text-3xl font-bold">{totalStudents.toLocaleString()}</p>
-              <p className="text-green-100 text-sm mt-1">No período selecionado</p>
-            </div>
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Média por Ano</h3>
-              <p className="text-3xl font-bold">{avgPerYear.toLocaleString()}</p>
-              <p className="text-green-100 text-sm mt-1">Estudantes por ano</p>
-            </div>
-          </div>
-
-          {/* Gráfico */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Evolução de Ingressos por Ano {selectedCourse !== 'todos' ? `- ${selectedCourse}` : ''}
-            </h2>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={filteredData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="Ano de Ingresso" 
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  formatter={(value) => [value.toLocaleString(), 'Estudantes']}
-                  labelFormatter={(label) => `Ano: ${label}`}
-                />
-                <Bar dataKey="Frequência Absoluta" fill="#10B981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const AnaliseAbcView = () => {
-    const abcChartData = getAbcChartData();
-    const classA = abcData.filter(item => item['Classe ABC'] === 'A').length;
-    const classB = abcData.filter(item => item['Classe ABC'] === 'B').length;
-    const classC = abcData.filter(item => item['Classe ABC'] === 'C').length;
-
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Classificação ABC dos Cursos</h1>
-            <button 
-              onClick={() => setCurrentView('menu')}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-            >
-              ← Voltar ao Menu
-            </button>
-          </div>
-
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Classe A</h3>
-              <p className="text-3xl font-bold">{classA}</p>
-              <p className="text-green-100 text-sm mt-1">Cursos de alta demanda</p>
-            </div>
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Classe B</h3>
-              <p className="text-3xl font-bold">{classB}</p>
-              <p className="text-green-100 text-sm mt-1">Cursos de média demanda</p>
-            </div>
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Classe C</h3>
-              <p className="text-3xl font-bold">{classC}</p>
-              <p className="text-green-100 text-sm mt-1">Cursos de baixa demanda</p>
-            </div>
-          </div>
-
-          {/* Gráfico */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Distribuição de Estudantes por Classe ABC</h2>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie
-                  data={abcChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ classe, percent }) => `Classe ${classe}: ${(percent * 100).toFixed(1)}%`}
-                  outerRadius={150}
-                  fill="#8884d8"
-                  dataKey="frequencia"
-                  nameKey="classe"
-                >
-                  {abcChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={greenColors[index % greenColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [value.toLocaleString(), 'Estudantes']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const AnaliseGeograficaView = () => {
-    const cidadeData = studentData.reduce((acc, student) => {
-      const cidade = student.Cidade;
-      if (cidade) {
-        acc[cidade] = (acc[cidade] || 0) + 1;
-      }
-      return acc;
-    }, {});
-
-    const chartData = Object.entries(cidadeData).map(([cidade, count]) => ({
-      cidade,
-      estudantes: count
-    })).sort((a, b) => b.estudantes - a.estudantes);
-
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Distribuição Geográfica</h1>
-            <button 
-              onClick={() => setCurrentView('menu')}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-            >
-              ← Voltar ao Menu
-            </button>
-          </div>
-
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Total de Cidades</h3>
-              <p className="text-3xl font-bold">{Object.keys(cidadeData).length}</p>
-              <p className="text-green-100 text-sm mt-1">Cidades atendidas</p>
-            </div>
-            <div className="bg-green-600 text-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Maior Concentração</h3>
-              <p className="text-3xl font-bold">{chartData[0]?.estudantes || 0}</p>
-              <p className="text-green-100 text-sm mt-1">Estudantes em {chartData[0]?.cidade || 'N/A'}</p>
-            </div>
-          </div>
-
-          {/* Gráfico */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Estudantes por Cidade</h2>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="cidade" 
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value) => [value.toLocaleString(), 'Estudantes']} />
-                <Bar dataKey="estudantes" fill="#10B981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-green-600">Carregando dados...</div>
-      </div>
-    );
-  }
-
-  // Renderização condicional baseada na view atual
-  switch (currentView) {
-    case 'temporal':
-      return <AnaliseTemporalView />;
-    case 'abc':
-      return <AnaliseAbcView />;
-    case 'geografica':
-      return <AnaliseGeograficaView />;
-    default:
-      return <MenuPrincipal />;
-  }
 };
 
 export default StudentDashboard;
