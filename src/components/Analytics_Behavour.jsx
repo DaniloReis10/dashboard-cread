@@ -5,9 +5,9 @@ import {
 } from "recharts";
 
 // ========================= Config =========================
-const BASE_URL = "https://web-production-3163.up.railway.app"; // mesma origem dos microserviços
+const BASE_URL = "https://web-production-3163.up.railway.app";
 
-// Normaliza rótulos de dias da semana vindos do backend (remove acentos e deixa minúsculo)
+// Normaliza rótulos de dias da semana (remove acentos e deixa minúsculo)
 const normalize = (s) => (s || "")
   .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -195,6 +195,23 @@ export default function Analytics_Behavour() {
     }
   };
 
+  const Card = ({ title, value, subtitle, variant="default" }) => (
+    <div className="bg-white rounded-2xl shadow p-5">
+      <div className="text-sm text-slate-500">{title}</div>
+      <div className="mt-1 text-3xl font-bold">{loading ? "…" : value}</div>
+      {subtitle && (
+        <div
+          className={
+            "mt-1 text-sm font-medium " +
+            (variant === "success" ? "text-emerald-600" : variant === "danger" ? "text-rose-600" : "text-slate-600")
+          }
+        >
+          {subtitle}
+        </div>
+      )}
+    </div>
+  );
+
   // ===================== Render =====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -209,69 +226,89 @@ export default function Analytics_Behavour() {
         <p className="text-slate-600 mt-2">Intervalo: {dataInicial} → {dataFinal}</p>
       </div>
 
-      {/* Filtros */}
+      {/* KPIs */}
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Data inicial/final */}
-        <div className="bg-white rounded-2xl shadow p-4">
-          <label className="block text-sm text-slate-500 mb-1">Data inicial</label>
-          <input type="date" className="w-full border rounded-lg p-2" value={dataInicial}
-            onChange={(e) => setDataInicial(e.target.value)} />
-          <label className="block text-sm text-slate-500 mt-3 mb-1">Data final</label>
-          <input type="date" className="w-full border rounded-lg p-2" value={dataFinal}
-            onChange={(e) => setDataFinal(e.target.value)} />
-        </div>
+        <Card title="Total de Acessos" value={totalAcessos.toLocaleString("pt-BR")} />
+        <Card title="Média por Dia" value={mediaAcessosPorDia.toLocaleString("pt-BR")} />
+        <Card
+          title="Dia com Mais Acesso"
+          value={diaComMaisAcesso.label || "-"}
+          subtitle={`(${(diaComMaisAcesso.total || 0).toLocaleString("pt-BR")} acessos)`}
+          variant="success"
+        />
+        <Card
+          title="Dia com Menos Acesso"
+          value={diaComMenosAcesso.label || "-"}
+          subtitle={`(${(diaComMenosAcesso.total || 0).toLocaleString("pt-BR")} acessos)`}
+          variant="danger"
+        />
+      </div>
 
-        {/* Cursos (dinâmico) */}
-        <div className="bg-white rounded-2xl shadow p-4" ref={cursosRef}>
-          <label className="block text-sm text-slate-500 mb-2">Cursos</label>
-          <button className="border rounded-lg px-3 py-2 w-full text-left" onClick={() => setDropdownCursosOpen(v => !v)}>
-            {cursosSelecionados.includes("Todos") ? "Todos os cursos" : `${cursosSelecionados.length} selecionado(s)`}
-          </button>
-          {dropdownCursosOpen && (
-            <div className="mt-2 max-h-64 overflow-auto border rounded-lg">
-              {opcoesCursos.map((nome) => (
-                <label key={nome} className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0">
-                  <input type="checkbox"
-                         checked={cursosSelecionados.includes("Todos") ? nome === "Todos" : cursosSelecionados.includes(nome)}
-                         onChange={() => handleCursoCheckboxChange(nome)} />
-                  <span>{nome}</span>
-                </label>
-              ))}
+      {/* Filtros (único card) */}
+      <div className="max-w-7xl mx-auto px-4 mt-6">
+        <div className="bg-white rounded-2xl shadow p-5">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+            {/* Data inicial */}
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Data Inicial</label>
+              <input type="date" className="w-full border rounded-lg p-2" value={dataInicial}
+                onChange={(e) => setDataInicial(e.target.value)} />
             </div>
-          )}
-        </div>
 
-        {/* Campus / Polo (dinâmico) */}
-        <div className="bg-white rounded-2xl shadow p-4" ref={campusRef}>
-          <label className="block text-sm text-slate-500 mb-2">Tipo de Local</label>
-          <select className="w-full border rounded-lg p-2 mb-3" value={tipoLocal} onChange={(e) => setTipoLocal(e.target.value)}>
-            <option value="campus">Campus</option>
-            <option value="polo">Polo</option>
-          </select>
-
-          <label className="block text-sm text-slate-500 mb-2">{tipoLocal === "polo" ? "Polo" : "Campus"}</label>
-          <button className="border rounded-lg px-3 py-2 w-full text-left" onClick={() => setDropdownCampusOpen(v => !v)}>
-            {campusSelecionado}
-          </button>
-          {dropdownCampusOpen && (
-            <div className="mt-2 max-h-64 overflow-auto border rounded-lg">
-              {opcoesCampus.map((nome) => (
-                <button key={nome} className="w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-slate-50"
-                        onClick={() => { setCampusSelecionado(nome); setDropdownCampusOpen(false); }}>
-                  {nome}
-                </button>
-              ))}
+            {/* Data final */}
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Data Final</label>
+              <input type="date" className="w-full border rounded-lg p-2" value={dataFinal}
+                onChange={(e) => setDataFinal(e.target.value)} />
             </div>
-          )}
-        </div>
 
-        {/* KPIs */}
-        <div className="bg-white rounded-2xl shadow p-4">
-          <div className="text-sm text-slate-500">Acessos no período</div>
-          <div className="text-2xl font-bold">{loading ? "…" : totalAcessos}</div>
-          <div className="mt-3 text-sm">Maior tráfego: <b>{diaComMaisAcesso.label}</b> ({diaComMaisAcesso.total || 0})</div>
-          <div className="text-sm">Menor tráfego: <b>{diaComMenosAcesso.label}</b> ({diaComMenosAcesso.total || 0})</div>
-          <div className="text-sm">Média/dia: <b>{mediaAcessosPorDia}</b></div>
+            {/* Cursos (dropdown de múltipla seleção) */}
+            <div className="relative" ref={cursosRef}>
+              <label className="block text-sm text-slate-500 mb-1">Curso(s)</label>
+              <button className="border rounded-lg px-3 py-2 w-full text-left" onClick={() => setDropdownCursosOpen(v => !v)}>
+                {cursosSelecionados.includes("Todos") ? "Todos os cursos" : `${cursosSelecionados.length} selecionado(s)`}
+              </button>
+              {dropdownCursosOpen && (
+                <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto border bg-white rounded-lg shadow">
+                  {opcoesCursos.map((nome) => (
+                    <label key={nome} className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0">
+                      <input type="checkbox"
+                             checked={cursosSelecionados.includes("Todos") ? nome === "Todos" : cursosSelecionados.includes(nome)}
+                             onChange={() => handleCursoCheckboxChange(nome)} />
+                      <span>{nome}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Campus/Polo */}
+            <div className="relative" ref={campusRef}>
+              <label className="block text-sm text-slate-500 mb-1">Campus/Polo</label>
+              <button className="border rounded-lg px-3 py-2 w-full text-left" onClick={() => setDropdownCampusOpen(v => !v)}>
+                {campusSelecionado}
+              </button>
+              {dropdownCampusOpen && (
+                <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto border bg-white rounded-lg shadow">
+                  {opcoesCampus.map((nome) => (
+                    <button key={nome} className="w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-slate-50"
+                            onClick={() => { setCampusSelecionado(nome); setDropdownCampusOpen(false); }}>
+                      {nome}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <label className="block text-sm text-slate-500 mb-1">Tipo</label>
+              <select className="w-full border rounded-lg p-2" value={tipoLocal} onChange={(e) => setTipoLocal(e.target.value)}>
+                <option value="campus">Campus</option>
+                <option value="polo">Polo</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -279,16 +316,17 @@ export default function Analytics_Behavour() {
       <div className="max-w-7xl mx-auto px-4 mt-8">
         <div className="bg-white rounded-2xl shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">Acessos por dia da semana</h2>
-            <select className="border rounded-lg p-2" value={diaSelecionado} onChange={(e) => setDiaSelecionado(e.target.value)}>
-              {ORDEM_DIAS.map((d) => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-              ))}
-            </select>
+            <h2 className="text-lg font-semibold text-slate-800">Acessos por Dia da Semana</h2>
+            <span className="text-sm text-slate-500">Clique em um dia para focar no gráfico de horários</span>
           </div>
 
           <ResponsiveContainer width="100%" height={340}>
-            <BarChart data={dadosAcesso}>
+            <BarChart data={dadosAcesso} onClick={(e) => {
+              const x = e && e.activeLabel;
+              if (!x) return;
+              const key = normalize(String(x));
+              if (ORDEM_DIAS.includes(key)) setDiaSelecionado(key);
+            }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={(d) => (d.label || d.dia)} />
               <YAxis />
@@ -302,10 +340,21 @@ export default function Analytics_Behavour() {
         </div>
       </div>
 
-      {/* Gráfico por hora do dia selecionado */}
+      {/* Gráfico por hora do dia selecionado (seletor movido para cá) */}
       <div className="max-w-7xl mx-auto px-4 mt-8 mb-12">
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Distribuição por hora — {diaSelecionado}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Distribuição por Hora</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Dia:</span>
+              <select className="border rounded-lg p-2" value={diaSelecionado} onChange={(e) => setDiaSelecionado(e.target.value)}>
+                {ORDEM_DIAS.map((d) => (
+                  <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <ResponsiveContainer width="100%" height={340}>
             <LineChart data={dadosHorarios}>
               <CartesianGrid strokeDasharray="3 3" />
