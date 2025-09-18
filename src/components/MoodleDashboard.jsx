@@ -9,9 +9,6 @@ import {
   Monitor,
   BarChart3,
   Calendar,
-  Clock,
-  MapPin,
-  TrendingDown,
   Award,
   HelpCircle,
   Search,
@@ -21,8 +18,6 @@ import {
   Bell,
   ChevronRight,
   Eye,
-  Smartphone,
-  Globe,
   BookOpen
 } from 'lucide-react';
 
@@ -32,19 +27,19 @@ const MoodleDashboard = () => {
 
   const categories = [
     {
-        id: 'oferta',
-        title: 'Perfil da Oferta',
-        icon: BookOpen,
-        color: 'from-yellow-500 to-yellow-600',
-        description: 'Análise da oferta de cursos e matrículas',
-        metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
-        questions: [
-          { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
-          { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
-          { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
-          { text: 'Como estão distribuídas por campus/polos','/polo-dashboard-ead' },
-          'Como estão distribuídas por cursos'
-        ]
+      id: 'oferta',
+      title: 'Perfil da Oferta',
+      icon: BookOpen,
+      color: 'from-yellow-500 to-yellow-600',
+      description: 'Análise da oferta de cursos e matrículas',
+      metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
+      questions: [
+        { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
+        { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
+        { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
+        { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
+        'Como estão distribuídas por cursos'
+      ]
     },
     {
       id: 'perfil',
@@ -304,7 +299,7 @@ const MoodleDashboard = () => {
                     </div>
 
                     {/* Action Button */}
-                    <div className="pt-4 border-t border-slate-200">
+                    <div className="pt-4 border-slate-200">
                       <button className={`w-full py-3 px-6 rounded-lg bg-gradient-to-r ${category.color} text-white font-medium hover:shadow-lg transition-shadow`}>
                         Explorar Análises de {category.title}
                       </button>
