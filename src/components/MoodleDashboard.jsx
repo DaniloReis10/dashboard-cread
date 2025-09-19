@@ -9,9 +9,6 @@ import {
   Monitor,
   BarChart3,
   Calendar,
-  Clock,
-  MapPin,
-  TrendingDown,
   Award,
   HelpCircle,
   Search,
@@ -21,8 +18,6 @@ import {
   Bell,
   ChevronRight,
   Eye,
-  Smartphone,
-  Globe,
   BookOpen
 } from 'lucide-react';
 
@@ -70,8 +65,8 @@ const MoodleDashboard = () => {
       description: 'Padrões de uso e interação na plataforma',
       metrics: ['2.1h Média/Sessão', '18h-22h Pico', '85% Móvel'],
       questions: [
-        'Horários e dias de maior acesso',
-        'Recursos mais utilizados na plataforma',
+        { text: 'Horários e dias de maior acesso', link: '/analytics-behavour' },
+        { text: 'Recursos mais utilizados na plataforma', link: '/analytics-resources' },
         'Tempo médio de acesso por sessão',
         'Percentual de acesso nos primeiros 7/30 dias',
         'Padrões comportamentais antes da evasão'
@@ -304,7 +299,7 @@ const MoodleDashboard = () => {
                     </div>
 
                     {/* Action Button */}
-                    <div className="pt-4 border-t border-slate-200">
+                    <div className="pt-4 border-slate-200">
                       <button className={`w-full py-3 px-6 rounded-lg bg-gradient-to-r ${category.color} text-white font-medium hover:shadow-lg transition-shadow`}>
                         Explorar Análises de {category.title}
                       </button>
