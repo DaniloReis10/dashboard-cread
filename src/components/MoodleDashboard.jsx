@@ -27,19 +27,19 @@ const MoodleDashboard = () => {
 
   const categories = [
     {
-      id: 'oferta',
-      title: 'Perfil da Oferta',
-      icon: BookOpen,
-      color: 'from-yellow-500 to-yellow-600',
-      description: 'Análise da oferta de cursos e matrículas',
-      metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
-      questions: [
-        { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
-        { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
-        { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
-        { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
-        'Como estão distribuídas por cursos'
-      ]
+        id: 'oferta',
+        title: 'Perfil da Oferta',
+        icon: BookOpen,
+        color: 'from-yellow-500 to-yellow-600',
+        description: 'Análise da oferta de cursos e matrículas',
+        metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
+        questions: [
+          { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
+          { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
+          { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
+          { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
+          'Como estão distribuídas por cursos'
+        ]
     },
     {
       id: 'perfil',
