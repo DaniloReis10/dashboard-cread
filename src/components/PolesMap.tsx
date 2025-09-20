@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Tooltip, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { API_BASE_URL } from '../config';
 
 
 
@@ -28,7 +29,7 @@ const PolesMap = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/poles/comprehensive`);
+        const response = await fetch(`${API_BASE_URL}/poles/comprehensive`);
         const data = await response.json();
         setPoloData(data);
       } catch (error) {
