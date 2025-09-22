@@ -1,5 +1,6 @@
 
 
+import { API_BASE_URL } from '../config';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   BarChart, 
@@ -265,7 +266,7 @@ const usePoloData = () => {
     setError(null);
     try {
       // Fetch data from your new Flask API endpoint for current enrollments
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/poles/comprehensive`);
+      const response = await fetch(`${API_BASE_URL}/poles/comprehensive`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
