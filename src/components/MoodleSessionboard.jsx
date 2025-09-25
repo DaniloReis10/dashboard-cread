@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, ComposedChart, Area, AreaChart
 } from "recharts";
 
 // ========================= Config =========================
@@ -25,11 +26,11 @@ function dozeMesesAtrasISO() {
   return toLocalISO(d);
 }
 
-// Paleta para gráficos
-const CORES_RECURSOS = [
-  "#3b82f6", "#06b6d4", "#8b5cf6", "#10b981", "#f59e0b",
-  "#ef4444", "#ec4899", "#6b7280", "#84cc16", "#f97316",
-];
+const PERIOD_TO_DAYS = {
+  "7dias": 7,
+  "30dias": 30,
+  "90dias": 90,
+};
 
 /* ===================== AMPULHETA (overlay fixo) ===================== */
 /* Componente isolado; não altera layout existente (usa position: fixed) */
@@ -54,14 +55,14 @@ const LoadingOverlay = ({ show, label = "Carregando…" }) => {
             <div className="absolute left-[18px] bottom-[16px] w-10 origin-bottom bg-indigo-500/80 rounded-t-sm" style={{height:"6px",animation:"sandBottom 1.6s linear infinite"}} />
           </div>
           <div className="text-slate-700 font-medium">{label}</div>
-          <div className="text-xs text-slate-500">Consultando uso de recursos…</div>
+          <div className="text-xs text-slate-500">Consultando tempo médio de sessão…</div>
         </div>
       </div>
     </>
   );
 };
 
-export default function RecursosMoodleDashboard() {
+const MoodleSessionboard = () => {
   // ===================== Estados de filtros =====================
   const [dataInicial, setDataInicial] = useState(() => dozeMesesAtrasISO());
   const [dataFinal, setDataFinal] = useState(() => hojeISO());
@@ -76,10 +77,13 @@ export default function RecursosMoodleDashboard() {
 
   // ===================== Estados de dados =====================
   const [loading, setLoading] = useState(false);
-  const [dadosRecursos, setDadosRecursos] = useState([]);
+  const [avgWeekly, setAvgWeekly] = useState([]);
+  const [avgGlobal, setAvgGlobal] = useState(null);
+  const [resourcesUsage, setResourcesUsage] = useState([]);
+  const [hourlyHits, setHourlyHits] = useState([]);
 
-  // === NEW: loading específico do resources-usage (para ampulheta) ===
-  const [loadingRes, setLoadingRes] = useState(false);
+  // === NEW: loading dedicado ao endpoint avg-session-time ===
+  const [loadingAvg, setLoadingAvg] = useState(false);
 
   // ===================== Carregamento Dinâmico =====================
   useEffect(() => {
@@ -107,7 +111,7 @@ export default function RecursosMoodleDashboard() {
       .catch((e) => console.error("Falha ao carregar polos/campi:", e));
   }, [tipoLocal]);
 
-  // ===================== Buscar dados de recursos =====================
+  // ===================== Buscar dados =====================
   const lastRequestIdRef = useRef(0);
 
   useEffect(() => {
@@ -117,8 +121,11 @@ export default function RecursosMoodleDashboard() {
     const di = new Date(dataInicial);
     const df = new Date(dataFinal);
     if (isFinite(di) && isFinite(df) && di > df) {
-      console.error("[resources-usage] Intervalo inválido", { dataInicial, dataFinal });
-      setDadosRecursos([]);
+      console.error("[session-dashboard] Intervalo inválido", { dataInicial, dataFinal });
+      setAvgWeekly([]);
+      setAvgGlobal(null);
+      setResourcesUsage([]);
+      setHourlyHits([]);
       setLoading(false);
       return;
     }
@@ -131,8 +138,7 @@ export default function RecursosMoodleDashboard() {
 
     // Regra: se houver só 1 curso selecionado, envia course_id
     let courseIdEnviado = null;
-    const apenasUmCurso =
-      cursosSelecionados.length === 1 && cursosSelecionados[0] !== "Todos";
+    const apenasUmCurso = cursosSelecionados.length === 1 && cursosSelecionados[0] !== "Todos";
     if (apenasUmCurso) {
       const nome = cursosSelecionados[0];
       const id = mapaCursoNomeParaId.get(nome);
@@ -142,166 +148,81 @@ export default function RecursosMoodleDashboard() {
       }
     }
 
-    const url = `${BASE_URL}/analytics_behavour/resources-usage?${params.toString()}`;
     const reqId = ++lastRequestIdRef.current;
     const t0 = performance.now();
 
-    console.info("→ [resources-usage] URL:", url);
-    console.info("→ [resources-usage] Params:", {
-      start: dataInicial,
-      end_inclusive: dataFinal,
-      end_exclusive_enviado: endExclusive,
-      ...(courseIdEnviado != null ? { course_id: courseIdEnviado } : {}),
-    });
-
     const timer = setTimeout(async () => {
       try {
-        /* === NEW: liga ampulheta específica desta chamada === */
-        setLoadingRes(true);
+        /* ===================== SOMENTE AVG-SESSION-TIME ===================== */
+        setLoadingAvg(true); // liga a ampulheta específica do AVG
 
-        const res = await fetch(url);
-        console.info("← [resources-usage] Status:", res.status, res.statusText);
-
-        let payload;
-        try {
-          payload = await res.json();
-        } catch (je) {
-          const txt = await res.text().catch(() => "");
-          console.warn("← [resources-usage] Resposta não-JSON:", txt.slice(0, 500));
-          throw new Error(`Resposta não-JSON (status ${res.status})`);
+        const avgRes = await fetch(`${BASE_URL}/analytics_behavour/avg-session-time?${params.toString()}`);
+        if (!avgRes.ok) {
+          throw new Error("Falha ao carregar avg-session-time");
         }
+        const avgJson = await avgRes.json();
 
-        console.info("← [resources-usage] JSON:", payload);
+        if (reqId !== lastRequestIdRef.current) return;
 
-        if (!res.ok) {
-          if (reqId === lastRequestIdRef.current) setDadosRecursos([]);
-          console.error("HTTP não OK em resources-usage:", { status: res.status, payload });
-          return;
-        }
+        // Processar avg-session-time
+        setAvgGlobal(
+          avgJson?.global?.avg_minutes_per_session != null
+            ? Math.round(Number(avgJson.global.avg_minutes_per_session))
+            : null
+        );
+        setAvgWeekly(
+          Array.isArray(avgJson?.weekly)
+            ? avgJson.weekly
+                .filter(d => d.avg_minutes_per_session != null)
+                .map(d => ({
+                  week_start: d.week_start,
+                  label: new Date(d.week_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+                  avg: Math.round(Number(d.avg_minutes_per_session)),
+                }))
+            : []
+        );
 
-        // backend → payload.data = [{ module_bucket, hits }, ...] (ou array bruto)
-        const rowsBrutas = Array.isArray(payload?.data)
-          ? payload.data
-          : (Array.isArray(payload) ? payload : []);
+        /* =================================================================== */
 
-        if (rowsBrutas.length === 0) {
-          console.warn("[resources-usage] Sem dados para o intervalo:", {
-            start: dataInicial,
-            end_inclusive: dataFinal,
-            end_exclusive_enviado: endExclusive,
-            echo_do_backend: payload?.params,
-          });
-        }
-
-        // Normaliza registros
-        const rows = rowsBrutas.map((r) => {
-          if (Array.isArray(r) && r.length >= 2) {
-            return { module_bucket: String(r[0]), hits: Number(r[1]) || 0 };
-          }
-          return {
-            module_bucket: String(r.module_bucket ?? r.bucket ?? "other"),
-            hits: Number(r.hits ?? r.value ?? 0),
-          };
-        });
-
-        const total = rows.reduce((acc, x) => acc + (Number(x.hits) || 0), 0);
-
-        const LABELS_BUCKET = {
-          pdf: "Arquivos PDF",
-          video: "Vídeos",
-          quiz: "Questionários",
-          forum: "Fóruns",
-          url: "Links Externos",
-          resource_other: "Outros Recursos",
-          other: "Outros",
-        };
-
-        const dados = rows.map((row) => {
-          const bucket = String(row.module_bucket || "other").toLowerCase();
-          const nome =
-            LABELS_BUCKET[bucket] ||
-            (bucket.charAt(0).toUpperCase() + bucket.slice(1));
-          const acessos = Number(row.hits) || 0;
-          const percentual = total > 0 ? (acessos / total) * 100 : 0;
-          return { nome, acessos, percentual };
-        });
-
-        console.table(rows.map(r => ({ module_bucket: r.module_bucket, hits: r.hits })));
-        console.table(dados.map(d => ({ nome: d.nome, acessos: d.acessos, percentual: +d.percentual.toFixed(2) })));
-
-        if (reqId === lastRequestIdRef.current) {
-          setDadosRecursos(dados);
-        } else {
-          console.info("[resources-usage] Resposta descartada (stale).");
-        }
       } catch (e) {
-        console.error("[resources-usage] Erro no fetch:", e);
-        if (reqId === lastRequestIdRef.current) setDadosRecursos([]);
+        console.error("[session-dashboard] Erro no fetch:", e);
+        if (reqId === lastRequestIdRef.current) {
+          setAvgWeekly([]);
+          setAvgGlobal(null);
+          // mantém recursos/horas intactos (não estamos mexendo neles aqui)
+        }
       } finally {
         if (reqId === lastRequestIdRef.current) {
           setLoading(false);
-          /* === NEW: desliga ampulheta específica desta chamada === */
-          setLoadingRes(false);
+          setLoadingAvg(false); // desliga a ampulheta do AVG
         }
-        console.info("⏱ [resources-usage] Duração:", `${(performance.now() - t0).toFixed(0)} ms`);
+        console.info("⏱ [session-dashboard] Duração:", `${(performance.now() - t0).toFixed(0)} ms`);
       }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [dataInicial, dataFinal, cursosSelecionados, campusSelecionado, tipoLocal, mapaCursoNomeParaId]);
 
-  // Força o ResponsiveContainer a recalcular quando dados chegam (corrige “gráfico invisível”)
+  // Força o ResponsiveContainer a recalcular quando dados chegam
   useEffect(() => {
-    if (Array.isArray(dadosRecursos) && dadosRecursos.length > 0) {
+    if (avgWeekly.length > 0 || resourcesUsage.length > 0 || hourlyHits.length > 0) {
       const id = setTimeout(() => {
         window.dispatchEvent(new Event("resize"));
       }, 0);
       return () => clearTimeout(id);
     }
-  }, [dadosRecursos?.length]);
-
-  // Log da base recebida
-  useEffect(() => {
-    if (Array.isArray(dadosRecursos)) {
-      console.table(
-        dadosRecursos.map(r => ({
-          nome: r.nome,
-          acessos: r.acessos,
-          "%": Number(r.percentual || 0).toFixed(2),
-        }))
-      );
-    }
-  }, [dadosRecursos]);
-
-  // ===== Base ordenada (mantida para pizza, KPIs e lista) =====
-  const toNum = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const recursosOrdenados = useMemo(() => {
-    const base = Array.isArray(dadosRecursos) ? dadosRecursos : [];
-    return [...base]
-      .map(d => ({
-        nome: String(d?.nome ?? ""),
-        acessos: toNum(d?.acessos),
-        percentual: toNum(d?.percentual),
-      }))
-      .sort((a, b) => b.acessos - a.acessos)
-      .slice(0, 12);
-  }, [dadosRecursos]);
-
-  const hasPieData = Array.isArray(recursosOrdenados) && recursosOrdenados.length > 0;
+  }, [avgWeekly.length, resourcesUsage.length, hourlyHits.length]);
 
   // ===================== KPIs =====================
-  const totalAcessos = useMemo(
-    () => recursosOrdenados.reduce((acc, r) => acc + (r?.acessos ?? 0), 0),
-    [recursosOrdenados]
-  );
-  const recursoMaisUtilizado = recursosOrdenados[0] ?? { nome: "-", acessos: 0, percentual: 0 };
-  const recursoMenosUtilizado =
-    recursosOrdenados[recursosOrdenados.length - 1] ?? { nome: "-", acessos: 0, percentual: 0 };
-  const diversidadeRecursos = recursosOrdenados.length;
+  const stats = useMemo(() => {
+    const avgOverall = avgGlobal ?? (avgWeekly.length ? 
+      Math.round(avgWeekly.reduce((s, x) => s + x.avg, 0) / avgWeekly.length) : 0);
+    const minWeekly = avgWeekly.length ? Math.min(...avgWeekly.map(d => d.avg)) : 0;
+    const maxWeekly = avgWeekly.length ? Math.max(...avgWeekly.map(d => d.avg)) : 0;
+    const totalHits = resourcesUsage.reduce((s, r) => s + r.hits, 0);
+
+    return { avgOverall, minWeekly, maxWeekly, totalHits };
+  }, [avgWeekly, avgGlobal, resourcesUsage]);
 
   // ===================== UI helpers =====================
   const cursosRef = useRef(null);
@@ -367,17 +288,16 @@ export default function RecursosMoodleDashboard() {
     </div>
   );
 
-  const CustomTooltip = ({ active, payload }) => {
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const data = payload[0]?.payload ?? {};
-      const acessos = typeof data.acessos === "number" ? data.acessos.toLocaleString("pt-BR") : "-";
-      const percentual =
-        typeof data.percentual === "number" ? `${Number(data.percentual).toFixed(1)}%` : "-";
       return (
         <div className="bg-white/95 backdrop-blur-sm border-none rounded-xl shadow-xl p-3">
-          <p className="font-semibold text-slate-800">{data.nome ?? "-"}</p>
-          <p className="text-blue-600">{`Acessos: ${acessos}`}</p>
-          <p className="text-slate-600">{percentual}</p>
+          <p className="font-semibold text-slate-800">{`Data: ${label}`}</p>
+          {payload.map((entry, idx) => (
+            <p key={idx} style={{ color: entry.color }}>
+              {`${entry.name}: ${entry.value}`}
+            </p>
+          ))}
         </div>
       );
     }
@@ -387,8 +307,8 @@ export default function RecursosMoodleDashboard() {
   // ===================== Render =====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
-      {/* NEW: Overlay da ampulheta (não altera layout) */}
-      <LoadingOverlay show={loadingRes} label="Aguarde: carregando uso de recursos" />
+      {/* Overlay da ampulheta (não altera layout) */}
+      <LoadingOverlay show={loadingAvg} label="Aguarde: calculando média de sessão" />
 
       <div className="fixed inset-0 opacity-30 pointer-events-none">
         <div
@@ -424,13 +344,13 @@ export default function RecursosMoodleDashboard() {
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-6 shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <h1 className="text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-100">
-                Recursos mais utilizados na plataforma
+                Dashboard de Tempo de Sessão
               </h1>
-              <h2 className="text-xl font-medium text-white/90 mb-4">Análise de uso dos recursos do Moodle</h2>
+              <h2 className="text-xl font-medium text-white/90 mb-4">Análise de duração e padrões de uso da plataforma</h2>
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/80">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -449,25 +369,26 @@ export default function RecursosMoodleDashboard() {
         <div className="max-w-7xl mx-auto px-4 -mt-8 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <Card
-              title="Total de Acessos"
-              value={typeof totalAcessos === "number" ? totalAcessos.toLocaleString("pt-BR") : "-"}
+              title="Tempo Médio Global"
+              value={typeof stats.avgOverall === "number" ? `${stats.avgOverall} min` : "-"}
+              subtitle="minutos por sessão"
             />
             <Card
-              title="Tipos de Recursos"
-              value={diversidadeRecursos}
-              subtitle="recursos diferentes"
-            />
-            <Card
-              title="Mais Utilizado"
-              value={recursoMaisUtilizado.nome}
-              subtitle={`${(recursoMaisUtilizado.acessos ?? 0).toLocaleString("pt-BR")} acessos`}
+              title="Menor Média Semanal"
+              value={`${stats.minWeekly} min`}
+              subtitle="semana com menor tempo"
               variant="success"
             />
             <Card
-              title="Menos Utilizado"
-              value={recursoMenosUtilizado.nome}
-              subtitle={`${(recursoMenosUtilizado.acessos ?? 0).toLocaleString("pt-BR")} acessos`}
+              title="Maior Média Semanal"
+              value={`${stats.maxWeekly} min`}
+              subtitle="semana com maior tempo"
               variant="warning"
+            />
+            <Card
+              title="Total de Acessos"
+              value={stats.totalHits.toLocaleString("pt-BR")}
+              subtitle="recursos utilizados"
             />
           </div>
         </div>
@@ -478,7 +399,7 @@ export default function RecursosMoodleDashboard() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-slate-800">Filtros de Análise</h3>
@@ -570,7 +491,7 @@ export default function RecursosMoodleDashboard() {
                     {opcoesCampus.map((nome) => (
                       <button
                         key={nome}
-                        className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors duração-150 border-b border-slate-100 last:border-b-0"
+                        className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors duration-150 border-b border-slate-100 last:border-b-0"
                         onClick={() => {
                           setCampusSelecionado(nome);
                           setDropdownCampusOpen(false);
@@ -586,7 +507,7 @@ export default function RecursosMoodleDashboard() {
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-2">Tipo</label>
                 <select
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duração-200"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white/70 backdrop-blur-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
                   value={tipoLocal}
                   onChange={(e) => setTipoLocal(e.target.value)}
                 >
@@ -601,40 +522,34 @@ export default function RecursosMoodleDashboard() {
         {/* Gráficos */}
         <div className="max-w-7xl mx-auto px-4 mb-8">
           <div className="grid grid-cols-1 gap-8">
-            {/* Pizza */}
+            {/* Gráfico 1 – Evolução da média semanal */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-semibold text-slate-800">Distribuição por Recurso</h2>
+                <h2 className="text-xl font-semibold text-slate-800">Evolução do Tempo Médio de Sessão (semanal)</h2>
               </div>
 
               <ResponsiveContainer width="100%" height={400}>
-                {hasPieData ? (
-                  <PieChart>
-                    <Pie
-                      data={recursosOrdenados}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) =>
-                        typeof entry?.percentual === "number"
-                          ? `${Number(entry.percentual).toFixed(1)}%`
-                          : ""
-                      }
-                      outerRadius={120}
-                      dataKey="acessos"
-                    >
-                      {recursosOrdenados.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CORES_RECURSOS[index % CORES_RECURSOS.length]} />
-                      ))}
-                    </Pie>
+                {avgWeekly.length > 0 ? (
+                  <AreaChart data={avgWeekly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="label" stroke="#64748b" />
+                    <YAxis label={{ value: "Minutos", angle: -90, position: "insideLeft" }} stroke="#64748b" />
                     <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
+                    <Area
+                      type="monotone"
+                      dataKey="avg"
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
+                      fillOpacity={0.25}
+                      strokeWidth={2}
+                      name="Média"
+                    />
+                  </AreaChart>
                 ) : (
                   <div className="h-[400px] flex items-center justify-center text-slate-400">
                     Sem dados no período selecionado
@@ -645,11 +560,11 @@ export default function RecursosMoodleDashboard() {
           </div>
         </div>
 
-        {/* Lista detalhada */}
+        {/* Lista detalhada de recursos */}
         <div className="max-w-7xl mx-auto px-4 mb-12">
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -668,7 +583,6 @@ export default function RecursosMoodleDashboard() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="h-4 bg-slate-300 rounded w-20" />
-                        <div className="h-4 bg-slate-300 rounded w-16" />
                       </div>
                     </div>
                   </div>
@@ -676,54 +590,36 @@ export default function RecursosMoodleDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {recursosOrdenados.map((recurso, index) => (
+                {resourcesUsage.length > 0 ? resourcesUsage.map((recurso, index) => (
                   <div
-                    key={recurso.nome}
+                    key={recurso.module_bucket}
                     className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-100 hover:shadow-md transition-all duration-200"
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: CORES_RECURSOS[index % CORES_RECURSOS.length] }}
+                        className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
                       />
                       <div>
-                        <h3 className="font-semibold text-slate-800">{recurso.nome}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="w-32 bg-slate-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Number(recurso.percentual ?? 0)}%`,
-                                backgroundColor: CORES_RECURSOS[index % CORES_RECURSOS.length],
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-slate-500">
-                            {typeof recurso.percentual === "number"
-                              ? `${Number(recurso.percentual).toFixed(1)}%`
-                              : "0%"}
-                          </span>
-                        </div>
+                        <h3 className="font-semibold text-slate-800 capitalize">{recurso.module_bucket}</h3>
+                        <div className="text-sm text-slate-500">Tipo de recurso</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-slate-800">
-                        {(recurso.acessos ?? 0).toLocaleString("pt-BR")}
+                        {recurso.hits.toLocaleString("pt-BR")}
                       </div>
                       <div className="text-sm text-slate-500">acessos</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {!loading && recursosOrdenados.length === 0 && (
-              <div className="text-center py-12">
-                <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <h3 className="text-lg font-medium text-slate-500 mb-2">Nenhum dado encontrado</h3>
-                <p className="text-slate-400">Ajuste os filtros para visualizar os dados.</p>
+                )) : (
+                  <div className="text-center py-12">
+                    <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <h3 className="text-lg font-medium text-slate-500 mb-2">Nenhum dado encontrado</h3>
+                    <p className="text-slate-400">Ajuste os filtros para visualizar os dados.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -731,4 +627,6 @@ export default function RecursosMoodleDashboard() {
       </div>
     </div>
   );
-}
+};
+
+export default MoodleSessionboard;

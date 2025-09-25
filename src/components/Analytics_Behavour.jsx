@@ -9,9 +9,9 @@ const BASE_URL = "https://web-production-3163.up.railway.app";
 
 // Helpers de data (YYYY-MM-DD)
 const hojeISO = () => new Date().toISOString().slice(0, 10);
-const seisMesesAtrasISO = () => {
+const dozeMesesAtrasISO = () => {
   const d = new Date();
-  d.setMonth(d.getMonth() - 6);
+  d.setMonth(d.getMonth() - 12);
   return d.toISOString().slice(0, 10);
 };
 
@@ -34,12 +34,21 @@ const HORA_LABEL = (h) => `${String(h).padStart(2, "0")}:00`;
 
 export default function Analytics_Behavour() {
   // ===================== Estados de filtros =====================
-  const [dataInicial, setDataInicial] = useState(() => seisMesesAtrasISO()); // ← 6 meses atrás
+  const [dataInicial, setDataInicial] = useState(() => dozeMesesAtrasISO()); // ← 6 meses atrás
   const [dataFinal, setDataFinal] = useState(() => hojeISO()); // ← hoje
 
   const [opcoesCursos, setOpcoesCursos] = useState(["Todos"]);
   const [mapaCursoNomeParaId, setMapaCursoNomeParaId] = useState(new Map());
   const [cursosSelecionados, setCursosSelecionados] = useState(["Todos"]);
+
+  // ===================== Derivar parâmetro estável de curso =====================
+  const selectedCourseId = useMemo(() => {
+  const unico =
+    cursosSelecionados.length === 1 && cursosSelecionados[0] !== "Todos";
+  if (!unico) return null;
+  return mapaCursoNomeParaId.get(cursosSelecionados[0]) ?? null;
+  }, [cursosSelecionados, mapaCursoNomeParaId]);
+
 
   const [tipoLocal, setTipoLocal] = useState("campus"); // "campus" | "polo"
   const [opcoesCampus, setOpcoesCampus] = useState(["Todos"]);
@@ -79,45 +88,40 @@ export default function Analytics_Behavour() {
       .catch((e) => console.error("Falha ao carregar polos/campi:", e));
   }, [tipoLocal]);
 
-  // ===================== Buscar dados (Top Hours x Days) =====================
+    // ===================== Buscar dados (Top Hours x Days) =====================
   useEffect(() => {
-    setLoading(true);
+    const controller = new AbortController();
+    const t = setTimeout(() => {
+      setLoading(true);
 
-    const params = new URLSearchParams({ start: dataInicial, end: dataFinal });
+      const params = new URLSearchParams({ start: dataInicial, end: dataFinal });
+      if (selectedCourseId != null) {
+        params.set("course_id", String(selectedCourseId));
+      }
 
-    // Se exatamente 1 curso (≠ Todos) → filtra por course_id, senão mantém agregado
-    const apenasUmCurso =
-      cursosSelecionados.length === 1 && cursosSelecionados[0] !== "Todos";
-    if (apenasUmCurso) {
-      const nome = cursosSelecionados[0];
-      const id = mapaCursoNomeParaId.get(nome);
-      if (id != null) params.set("course_id", String(id));
-    }
+      fetch(`${BASE_URL}/analytics_behavour/top-hours-days?${params.toString()}`, {
+        signal: controller.signal,
+      })
+        .then((r) => r.json())
+        .then((payload) => {
+          const rows = Array.isArray(payload?.data) ? payload.data : [];
 
-    fetch(
-      `${BASE_URL}/analytics_behavour/top-hours-days?${params.toString()}`
-    )
-      .then((r) => r.json())
-      .then((payload) => {
-        const rows = Array.isArray(payload?.data) ? payload.data : [];
+          // Agrupa por dia-da-semana (rótulo vindo do backend, ex.: "Segunda", "Terça"...)
+          const agrupado = new Map(); // key: dia normalizado → valores por hora
+          const rotuloOriginal = new Map(); // preserva o rótulo exibível
 
-        // Agrupa por dia-da-semana (rótulo vindo do backend, ex.: "Segunda", "Terça"...)
-        const agrupado = new Map(); // key: dia normalizado → valores por hora
-        const rotuloOriginal = new Map(); // preserva o rótulo exibível
+          for (const r of rows) {
+            const diaLabel = r?.dow_label ?? ""; // string
+            const diaKey = normalize(diaLabel); // normalizado (ex.: "terca")
+            const hits = Number(r?.hits ?? 0);
+            if (!agrupado.has(diaKey)) agrupado.set(diaKey, Array(24).fill(0));
+            rotuloOriginal.set(diaKey, diaLabel);
+            const hour = Number(r?.hour ?? 0);
+            if (hour >= 0 && hour < 24) agrupado.get(diaKey)[hour] = hits;
+          }
 
-        for (const r of rows) {
-          const diaLabel = r?.dow_label ?? ""; // string
-          const diaKey = normalize(diaLabel); // normalizado (ex.: "terca")
-          const hits = Number(r?.hits ?? 0);
-          if (!agrupado.has(diaKey)) agrupado.set(diaKey, Array(24).fill(0));
-          rotuloOriginal.set(diaKey, diaLabel);
-          const hour = Number(r?.hour ?? 0);
-          if (hour >= 0 && hour < 24) agrupado.get(diaKey)[hour] = hits;
-        }
-
-        // Constrói série agregada por dia para o gráfico de barras (mín/med/máx/total)
-        const porDia = Array.from(agrupado.entries()).map(
-          ([diaKey, horas]) => {
+          // Constrói série agregada por dia para o gráfico de barras (mín/med/máx/total)
+          const porDia = Array.from(agrupado.entries()).map(([diaKey, horas]) => {
             const total = horas.reduce((a, b) => a + b, 0);
             const minimo = Math.min(...horas);
             const maximo = Math.max(...horas);
@@ -130,41 +134,47 @@ export default function Analytics_Behavour() {
               maximo,
               total,
             };
+          });
+
+          // Ordena na sequência desejada (segunda → domingo)
+          porDia.sort((a, b) => ORDEM_DIAS.indexOf(a.dia) - ORDEM_DIAS.indexOf(b.dia));
+          setDadosAcesso(porDia);
+
+          // Mantém dia selecionado coerente (se vazio, usa o primeiro disponível)
+          const diaAtual = porDia.some((d) => d.dia === diaSelecionado)
+            ? diaSelecionado
+            : porDia[0]?.dia || "segunda";
+          setDiaSelecionado(diaAtual);
+
+          // Série por hora do dia selecionado
+          const horasSel = agrupado.get(diaAtual) || Array(24).fill(0);
+          const mediaConst = Math.round(
+            horasSel.reduce((a, b) => a + b, 0) / (horasSel.length || 1)
+          );
+          const porHora = horasSel.map((v, h) => ({
+            dia: diaAtual,
+            horario: HORA_LABEL(h),
+            acessos: v,
+            media: mediaConst,
+          }));
+          setDadosHorarios(porHora);
+        })
+        .catch((e) => {
+          if (e.name !== "AbortError") {
+            console.error("Erro ao buscar top-hours-days:", e);
+            setDadosAcesso([]);
+            setDadosHorarios([]);
           }
-        );
+        })
+        .finally(() => setLoading(false));
+    }, 0);
 
-        // Ordena na sequência desejada (segunda → domingo)
-        porDia.sort(
-          (a, b) => ORDEM_DIAS.indexOf(a.dia) - ORDEM_DIAS.indexOf(b.dia)
-        );
-        setDadosAcesso(porDia);
-
-        // Mantém dia selecionado coerente (se vazio, usa o primeiro disponível)
-        const diaAtual = porDia.some((d) => d.dia === diaSelecionado)
-          ? diaSelecionado
-          : porDia[0]?.dia || "segunda";
-        setDiaSelecionado(diaAtual);
-
-        // Série por hora do dia selecionado
-        const horasSel = agrupado.get(diaAtual) || Array(24).fill(0);
-        const mediaConst = Math.round(
-          horasSel.reduce((a, b) => a + b, 0) / (horasSel.length || 1)
-        );
-        const porHora = horasSel.map((v, h) => ({
-          dia: diaAtual,
-          horario: HORA_LABEL(h),
-          acessos: v,
-          media: mediaConst,
-        }));
-        setDadosHorarios(porHora);
-      })
-      .catch((e) => {
-        console.error("Erro ao buscar top-hours-days:", e);
-        setDadosAcesso([]);
-        setDadosHorarios([]);
-      })
-      .finally(() => setLoading(false));
-  }, [dataInicial, dataFinal, cursosSelecionados]); // eslint-disable-line
+    // Cleanup: cancela o primeiro ciclo (StrictMode) e qualquer requisição em voo
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [dataInicial, dataFinal, selectedCourseId]); // eslint-disable-line
 
   // ===================== Estatísticas simples =====================
   const totalAcessos = useMemo(
@@ -234,6 +244,19 @@ export default function Analytics_Behavour() {
       setCursosSelecionados(atual.length ? atual : ["Todos"]);
     }
   };
+
+  const LoadingOverlay = () => (
+    <div className="absolute inset-0 z-20 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+      <div className="flex items-center gap-3 text-slate-700">
+        <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24" fill="none">
+          <path d="M7 3h10a1 1 0 0 1 1 1v2a5 5 0 0 1-2.2 4.16L13 12l2.8 1.84A5 5 0 0 1 18 18v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-2a5 5 0 0 1 2.2-4.16L11 12 8.2 10.16A5 5 0 0 1 6 6V4a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+        <span className="text-sm font-medium">Carregando dados…</span>
+      </div>
+    </div>
+  );
+
+
 
   const Card = ({ title, value, subtitle, variant = "default" }) => (
     <div className="relative bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-slate-100 overflow-hidden group">
@@ -471,7 +494,7 @@ export default function Analytics_Behavour() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
+          <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
@@ -492,6 +515,8 @@ export default function Analytics_Behavour() {
                 </span>
               </div>
             </div>
+
+            {loading && <LoadingOverlay />}
 
             <ResponsiveContainer width="100%" height={340}>
               <BarChart
@@ -531,7 +556,7 @@ export default function Analytics_Behavour() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 mb-12">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
+          <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
@@ -558,7 +583,7 @@ export default function Analytics_Behavour() {
                 </select>
               </div>
             </div>
-
+            {loading && <LoadingOverlay />}
             <ResponsiveContainer width="100%" height={340}>
               <LineChart data={dadosHorarios}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
