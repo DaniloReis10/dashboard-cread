@@ -43,7 +43,7 @@ const PoloDashboardPage = () => {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation 
         <div className="flex items-center px-4 lg:px-20 py-4 bg-white border-b border-ifce-dark overflow-x-auto">
           <nav className="flex items-center gap-4 lg:gap-8 whitespace-nowrap">
             <a href="#" className="text-black text-sm font-bold whitespace-nowrap">Processos Seletivos</a>
@@ -55,8 +55,8 @@ const PoloDashboardPage = () => {
             <a href="#" className="text-black text-sm font-bold whitespace-nowrap">Sistemas</a>
             <a href="#" className="text-black text-sm font-bold whitespace-nowrap">Central de Atendimento</a>
           </nav>
-        </div>
-      </div>
+        </div> */}
+      </div> 
 
       {/* Main Content */}
       <div className="w-full max-w-[1200px] mx-auto px-5">
