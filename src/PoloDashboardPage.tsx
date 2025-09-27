@@ -27,7 +27,7 @@ const PoloDashboardPage = () => {
               <div className="w-[2px] h-[19px] rounded-[9.6px] border border-gray-300 opacity-40"></div>
             </div>
             
-            {/* Header controls */}
+            {/* Header controls 
             <div className="flex items-center gap-4">
               <span className="text-gray-500 text-lg font-normal">contrast</span>
               <div className="w-[42px] h-[42px] rounded-[21px] border border-gray-100"></div>
@@ -39,7 +39,7 @@ const PoloDashboardPage = () => {
                   <span className="text-gray-400 text-sm">Busca</span>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
