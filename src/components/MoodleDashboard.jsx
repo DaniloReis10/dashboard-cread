@@ -68,7 +68,7 @@ const MoodleDashboard = () => {
         { text: 'Horários e dias de maior acesso', link: '/analytics-behavour' },
         { text: 'Recursos mais utilizados na plataforma', link: '/analytics-resources' },
         { text: 'Tempo médio de acesso por sessão', link: '/moodle-sessionboard' },
-        'Percentual de acesso nos primeiros 7/30 dias',
+        { text: 'Percentual de acesso nos primeiros 7/30 dias', link: '/analytics-activation' },
         'Padrões comportamentais antes da evasão'
       ]
     },
