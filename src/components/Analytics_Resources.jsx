@@ -4,7 +4,7 @@ import {
 } from "recharts";
 
 // ========================= Config =========================
-const BASE_URL = "https://web-production-3163.up.railway.app";
+export const BASE_URL = ""; // chama caminhos relativos
 
 // ==== Helpers de data (locais) ====
 function toLocalISO(d) {

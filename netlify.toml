@@ -1,0 +1,128 @@
+# netlify.toml — coloque este arquivo na raiz do projeto
+# Este arquivo proxia os MESMOS caminhos usados no front para o backend no Railway.
+# Assim você pode usar chamadas relativas (BASE_URL = "") sem mudar as rotas.
+
+####################################
+# 1) Proxy para rotas da sua API   #
+####################################
+
+# --- Analytics (comportamento/engajamento) ---
+# Cobre: /analytics_behavour/activation, /resources-usage, /top-hours-days,
+#        /avg-session-time, e quaisquer outros sob /analytics_behavour/**
+[[redirects]]
+  from = "/analytics_behavour/*"
+  to = "https://web-production-3163.up.railway.app/analytics_behavour/:splat"
+  status = 200
+  force = true
+
+# --- Recursos auxiliares do dashboard ---
+# /courses
+[[redirects]]
+  from = "/courses"
+  to = "https://web-production-3163.up.railway.app/courses"
+  status = 200
+  force = true
+
+# /campus
+[[redirects]]
+  from = "/campus"
+  to = "https://web-production-3163.up.railway.app/campus"
+  status = 200
+  force = true
+
+# /polos
+[[redirects]]
+  from = "/polos"
+  to = "https://web-production-3163.up.railway.app/polos"
+  status = 200
+  force = true
+
+# --- Dados educacionais (mapas e dashboards) ---
+# /studentbycities
+[[redirects]]
+  from = "/studentbycities"
+  to = "https://web-production-3163.up.railway.app/studentbycities"
+  status = 200
+  force = true
+
+# /years_suap
+[[redirects]]
+  from = "/years_suap"
+  to = "https://web-production-3163.up.railway.app/years_suap"
+  status = 200
+  force = true
+
+# /poles/**
+[[redirects]]
+  from = "/poles/*"
+  to = "https://web-production-3163.up.railway.app/poles/:splat"
+  status = 200
+  force = true
+
+######################################
+# 2) CORS headers (opcionais)        #
+######################################
+# Estes headers são aplicados pelo Netlify nas respostas servidas pelo proxy deste domínio.
+# Eles padronizam respostas quando o front chama caminhos relativos.
+# OBS: Eles NÃO alteram a API no Railway; servem apenas para o domínio Netlify.
+[[headers]]
+  for = "/analytics_behavour/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[headers]]
+  for = "/courses"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/campus"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/polos"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/studentbycities"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/years_suap"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/poles/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+
+##########################################
+# 3) Segurança/Performance (opcional)    #
+##########################################
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+##########################################
+# 4) SPA Fallback (React Router)         #
+##########################################
+# Deixe por ÚLTIMO para não capturar as rotas de API acima.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
