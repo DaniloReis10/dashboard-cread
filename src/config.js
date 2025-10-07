@@ -6,4 +6,4 @@ const productionURL = 'https://web-production-3163.up.railway.app';
 const developmentURL = 'http://127.0.0.1:5000';
 
 // Export the correct base URL based on the environment
-export const API_BASE_URL = isProduction ? productionURL : developmentURL;
+export const API_BASE_URL = productionURL;

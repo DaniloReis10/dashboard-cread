@@ -27,19 +27,19 @@ const MoodleDashboard = () => {
 
   const categories = [
     {
-        id: 'oferta',
-        title: 'Perfil da Oferta',
-        icon: BookOpen,
-        color: 'from-yellow-500 to-yellow-600',
-        description: 'Análise da oferta de cursos e matrículas',
-        metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
-        questions: [
-          { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
-          { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
-          { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
-          { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
-          'Como estão distribuídas por cursos'
-        ]
+      id: 'oferta',
+      title: 'Perfil da Oferta',
+      icon: BookOpen,
+      color: 'from-yellow-500 to-yellow-600',
+      description: 'Análise da oferta de cursos e matrículas',
+      metrics: ['10 Cursos', '5k Matrículas', '2 Polos'],
+      questions: [
+        { text: 'Qual a quantidade de matrículas totais por ano', link: '/matriculas-por-ano' },
+        { text: 'Como estão distribuidas por município', link: '/mapa-ceara' },
+        { text: 'Como estão distribuidas por Estados', link: '/mapa-estados-brasil' },
+        { text: 'Como estão distribuídas por campus/polos', link: '/polo-dashboard-ead' },
+        'Como estão distribuídas por cursos'
+      ]
     },
     {
       id: 'perfil',
@@ -49,12 +49,10 @@ const MoodleDashboard = () => {
       description: 'Análise demográfica e comportamental dos alunos',
       metrics: ['4.2k Alunos','52% mulheres, solteiros,23 anos','1,1 salários minimos', '68% CE', '32% Outros Estados'],
       questions: [
-        'Perfil demográfico dos alunos matriculados',
-        'Perfil por gênero, estado civil e idade',
-        'Perfil por faixa de renda',
-        'Percentual de alunos de fora do Ceará',
-        'Taxa de conclusão por perfil de aluno',
-        'Relação entre perfil demográfico e evasão'
+        { text: 'Perfil por gênero, estado civil e idade', link: '/perfil-genero-estado-civil-idade' },
+        { text: 'Perfil por faixa de renda', link: '/perfil-renda' },
+        { text: 'Percentual de alunos de fora do Ceará', link: '/alunos-fora-ceara' },
+        { text: 'Análise de Status por perfil', link: '/status-por-perfil' },
       ]
     },
     {
@@ -136,6 +134,8 @@ const MoodleDashboard = () => {
     { label: 'Cursos Ativos', value: '28', change: '+3', icon: GraduationCap },
     { label: 'Acessos Hoje', value: '1.234', change: '+8%', icon: Activity }
   ];
+
+  const getActiveCategory = () => categories.find(c => c.id === activeCategory);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -243,7 +243,7 @@ const MoodleDashboard = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               {(() => {
-                const category = categories.find(c => c.id === activeCategory);
+                const category = getActiveCategory();
                 return (
                   <div>
                     <div className="flex items-center justify-between mb-6">
@@ -281,28 +281,22 @@ const MoodleDashboard = () => {
                       <h3 className="text-lg font-semibold text-slate-900 mb-4">Questões de Negócio</h3>
                       <div className="space-y-3">
                         {category.questions.map((question, index) => (
-                          <div key={index} className="flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer">
-                            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">
+                          <Link 
+                            to={typeof question === 'object' ? question.link : '#'} 
+                            key={index} 
+                            className={`flex items-start space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors ${typeof question !== 'object' ? 'cursor-not-allowed opacity-60' : ''}`}
+                            onClick={(e) => typeof question !== 'object' && e.preventDefault()}
+                          >
+                            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5 flex-shrink-0">
                               {index + 1}
                             </div>
                             <div className="flex-1">
-                              {typeof question === 'string' ? (
-                                <p className="text-slate-700">{question}</p>
-                              ) : (
-                                <Link to={question.link} className="text-slate-700 hover:underline">{question.text}</Link>
-                              )}
+                                <p className="text-slate-700">{typeof question === 'object' ? question.text : question}</p>
                             </div>
                             <ChevronRight className="w-4 h-4 text-slate-400" />
-                          </div>
+                          </Link>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Action Button */}
-                    <div className="pt-4 border-slate-200">
-                      <button className={`w-full py-3 px-6 rounded-lg bg-gradient-to-r ${category.color} text-white font-medium hover:shadow-lg transition-shadow`}>
-                        Explorar Análises de {category.title}
-                      </button>
                     </div>
                   </div>
                 );
@@ -343,3 +337,4 @@ const MoodleDashboard = () => {
 };
 
 export default MoodleDashboard;
+
