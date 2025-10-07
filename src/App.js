@@ -11,6 +11,12 @@ import Analytics_Resources from './components/Analytics_Resources';
 import MoodleSessionboard from './components/MoodleSessionboard';
 import ActivationDashboard from './components/Analytics_Activation';
 
+import PerfilGeneroEstadoCivilIdade from './components/PerfilGeneroEstadoCivilIdade';
+import PerfilRenda from './components/PerfilRenda';
+import AlunosForaCeara from './components/AlunosForaCeara';
+import StatusPorPerfil from './components/StatusPorPerfil';
+
+
 import './App.css';
 
 function App() {
@@ -27,9 +33,15 @@ function App() {
           <Route path="/analytics-resources" element={<Analytics_Resources />} />
           <Route path="/moodle-sessionboard" element={<MoodleSessionboard />} />
           <Route path="/analytics-activation" element={<ActivationDashboard />} /> 
-          {/* rota com typo redirecionando para a correta */}
+          
           <Route path="/analytics-resorces" element={<Navigate to="/analytics-resources" replace />} />
-          {/* rota de Activation */}
+          
+          <Route path="/perfil-genero-estado-civil-idade" element={<PerfilGeneroEstadoCivilIdade />} />
+          <Route path="/perfil-renda" element={<PerfilRenda />} />
+          <Route path="/alunos-fora-ceara" element={<AlunosForaCeara />} />
+          <Route path="/status-por-perfil" element={<StatusPorPerfil />} />
+
+
           <Route path="*" element={<div>404 – página não encontrada</div>} />
         </Routes>
       </div>
@@ -38,3 +50,4 @@ function App() {
 }
 
 export default App;
+
