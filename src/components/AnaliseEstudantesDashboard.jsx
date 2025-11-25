@@ -1,6 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, FileText, BarChart3, PieChart, Layers, Settings, Filter, RotateCcw, Search, CheckCircle, Menu } from 'lucide-react';
+import { Download, FileText, BarChart3, PieChart, Layers, Settings, Filter, RotateCcw, Search, CheckCircle } from 'lucide-react';
+
+// >>> Ajuste aqui se o backend estiver em outro host/porta
+const BASE_URL = import.meta?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
+
+// Util: monta querystring com os filtros do back
+const buildQS = (filters) => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') params.append(k, v);
+  });
+  return params.toString();
+};
 
 const StudentDashboard = () => {
   const [filters, setFilters] = useState({
@@ -8,127 +20,135 @@ const StudentDashboard = () => {
     anoFinal: '2024',
     curso: 'Todos',
     campus: 'Todos',
-    modalidade: 'Todos',
-    periodo: 'Todos',
-    search: ''
+    search: '',
+    // Parâmetro opcional suportado pelo back (filtra Nature of Participation quando EAD)
+    // modality: 'EAD',
   });
 
   const [activeChart, setActiveChart] = useState('Barras');
 
-  // Dados completos do gráfico por curso e campus
-  const completeData = [
-    { year: '2010', value: 20, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Matutino' },
-    { year: '2011', value: 40, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Matutino' },
-    { year: '2012', value: 65, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Vespertino' },
-    { year: '2013', value: 80, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Matutino' },
-    { year: '2014', value: 75, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Noturno' },
-    { year: '2015', value: 95, curso: 'Administração', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Noturno' },
-    { year: '2016', value: 130, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Híbrido', periodo: 'Vespertino' },
-    { year: '2017', value: 145, curso: 'Administração', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Noturno' },
-    { year: '2018', value: 170, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Presencial', periodo: 'Matutino' },
-    { year: '2019', value: 160, curso: 'Informática', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Vespertino' },
-    { year: '2020', value: 180, curso: 'Administração', campus: 'Fortaleza', modalidade: 'EAD', periodo: 'Noturno' },
-    { year: '2021', value: 200, curso: 'Engenharia', campus: 'Maracanaú', modalidade: 'Híbrido', periodo: 'Matutino' },
-    { year: '2022', value: 220, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Presencial', periodo: 'Vespertino' },
-    { year: '2023', value: 210, curso: 'Administração', campus: 'Caucaia', modalidade: 'EAD', periodo: 'Noturno' },
-    { year: '2024', value: 240, curso: 'Informática', campus: 'Fortaleza', modalidade: 'Híbrido', periodo: 'Matutino' }
-  ];
+  // Estado remoto
+  const [series, setSeries] = useState([]);          // /conclusoes_ano
+  const [stats, setStats] = useState(null);          // /conclusoes_ano/stats
+  const [options, setOptions] = useState({           // /conclusoes_ano/meta/options
+    anos: [], cursos: ['Todos'], campi: ['Todos']
+  });
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
 
-  // Função para filtrar e agrupar os dados
-  const filteredData = useMemo(() => {
-    let filtered = completeData.filter(item => {
-      const year = parseInt(item.year);
-      const anoInicial = parseInt(filters.anoInicial);
-      const anoFinal = parseInt(filters.anoFinal);
-      
-      const yearInRange = year >= anoInicial && year <= anoFinal;
-      const cursoMatch = filters.curso === 'Todos' || item.curso === filters.curso;
-      const campusMatch = filters.campus === 'Todos' || item.campus === filters.campus;
-      const modalidadeMatch = filters.modalidade === 'Todos' || item.modalidade === filters.modalidade;
-      const periodoMatch = filters.periodo === 'Todos' || item.periodo === filters.periodo;
-      
-      const searchMatch = filters.search === '' || 
-        item.curso.toLowerCase().includes(filters.search.toLowerCase()) ||
-        item.campus.toLowerCase().includes(filters.search.toLowerCase());
-      
-      return yearInRange && cursoMatch && campusMatch && modalidadeMatch && periodoMatch && searchMatch;
-    });
-
-    // Agrupa por ano e soma os valores
-    const grouped = filtered.reduce((acc, item) => {
-      const existing = acc.find(g => g.year === item.year);
-      if (existing) {
-        existing.value += item.value;
-      } else {
-        acc.push({ year: item.year, value: item.value });
+  // Carrega opções para os selects
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/conclusoes_ano/meta/options`);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        setOptions({
+          anos: json.anos || [],
+          cursos: json.cursos || ['Todos'],
+          campi: json.campi || ['Todos'],
+        });
+      } catch (e) {
+        // Mantém opções mínimas mesmo com erro
+        setOptions((prev) => prev);
       }
-      return acc;
-    }, []);
+    };
+    loadOptions();
+  }, []);
 
-    // Ordena por ano
-    return grouped.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+  // Carrega série e stats sempre que filtros mudarem
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const qs = buildQS(filters);
+
+        const [seriesRes, statsRes] = await Promise.all([
+          fetch(`${BASE_URL}/conclusoes_ano?${qs}`, { signal: controller.signal }),
+          fetch(`${BASE_URL}/conclusoes_ano/stats?${qs}`, { signal: controller.signal }),
+        ]);
+
+        const [seriesJson, statsJson] = await Promise.all([seriesRes.json(), statsRes.json()]);
+        if (seriesJson.error) throw new Error(seriesJson.error);
+        if (statsJson.error) throw new Error(statsJson.error);
+
+        // Backend retorna [{year, value}] na série (agregado por ano) :contentReference[oaicite:2]{index=2}
+        setSeries(Array.isArray(seriesJson) ? seriesJson : []);
+        setStats(statsJson || null);
+      } catch (e) {
+        if (e.name !== 'AbortError') setErr(e.message || String(e));
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    return () => controller.abort();
   }, [filters]);
 
-  // Calcula estatísticas dinâmicas baseadas nos dados filtrados
+  // Estatísticas exibidas nos cards (agora vindas do back)
   const dynamicStats = useMemo(() => {
-    const totalStudents = filteredData.reduce((sum, item) => sum + item.value, 0);
-    const avgGrowth = filteredData.length > 1 ? 
-      ((filteredData[filteredData.length - 1]?.value - filteredData[0]?.value) / filteredData[0]?.value * 100).toFixed(1) : 0;
-    const peakYear = filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 });
-    const yearsSpan = filteredData.length;
+    const total = stats?.totalStudents ?? series.reduce((s, it) => s + (it.value || 0), 0);
+    const peakLabel = stats?.peakYear ?? (series[0]?.year ?? 'N/A');
+    const peakValue = stats?.peakValue ?? (series[0]?.value ?? 0);
+    const growth = stats?.avgGrowthPercent != null ? `${stats.avgGrowthPercent}% crescimento médio` : 'N/A';
+    const yearsSpan = stats?.yearsSpan ?? series.length;
 
     return [
-      { 
-        title: `${filters.anoInicial}-${filters.anoFinal}`, 
-        percentage: `${avgGrowth}% crescimento médio`, 
+      {
+        title: `${filters.anoInicial}-${filters.anoFinal}`,
+        percentage: growth,
         color: '#22c55e',
         icon: <CheckCircle className="w-6 h-6" />
       },
-      { 
-        title: peakYear.year, 
-        percentage: `Pico: ${peakYear.value} conclusões`, 
+      {
+        title: peakLabel,
+        percentage: `Pico: ${peakValue} conclusões`,
         color: '#3b82f6',
         icon: <FileText className="w-6 h-6" />
       },
-      { 
-        title: filters.curso, 
-        percentage: `${totalStudents} total conclusões`, 
+      {
+        title: filters.curso,
+        percentage: `${total} total conclusões`,
         color: '#8b5cf6',
         icon: <BarChart3 className="w-6 h-6" />
       },
-      { 
-        title: `${yearsSpan} anos`, 
-        percentage: `Período analisado`, 
+      {
+        title: `${yearsSpan} anos`,
+        percentage: `Período analisado`,
         color: '#10b981',
         icon: <Settings className="w-6 h-6" />
       }
     ];
-  }, [filteredData, filters]);
+  }, [series, stats, filters]);
 
-  // Função para resetar filtros
+  // Contagem de filtros ativos (para UX)
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.anoInicial !== '2010' || filters.anoFinal !== '2024') count++;
+    if (filters.curso !== 'Todos') count++;
+    if (filters.campus !== 'Todos') count++;
+    if (filters.search !== '') count++;
+    // if (filters.modality) count++; // se usar
+    return count;
+  }, [filters]);
+
+  // Export URLs com os mesmos filtros
+  const qs = buildQS(filters);
+  const csvUrl = `${BASE_URL}/conclusoes_ano/export/csv?${qs}`;
+  const jsonUrl = `${BASE_URL}/conclusoes_ano/export/json?${qs}`;
+
+  // Helpers de UI
   const resetFilters = () => {
     setFilters({
       anoInicial: '2010',
       anoFinal: '2024',
       curso: 'Todos',
       campus: 'Todos',
-      modalidade: 'Todos',
-      periodo: 'Todos',
-      search: ''
+      search: '',
     });
   };
-
-  // Conta filtros ativos
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.anoInicial !== '2010' || filters.anoFinal !== '2024') count++;
-    if (filters.curso !== 'Todos') count++;
-    if (filters.campus !== 'Todos') count++;
-    if (filters.modalidade !== 'Todos') count++;
-    if (filters.periodo !== 'Todos') count++;
-    if (filters.search !== '') count++;
-    return count;
-  }, [filters]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,9 +173,9 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Title Section */}
+        {/* Title */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-white" />
@@ -171,7 +191,7 @@ const StudentDashboard = () => {
           </button>
         </div>
 
-        {/* Filters Section */}
+        {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -183,16 +203,13 @@ const StudentDashboard = () => {
                 </span>
               )}
             </h2>
-            <button 
-              onClick={resetFilters}
-              className="flex items-center text-gray-500 hover:text-gray-700"
-            >
+            <button onClick={resetFilters} className="flex items-center text-gray-500 hover:text-gray-700">
               <RotateCcw className="w-4 h-4 mr-1" />
               Restaurar
             </button>
           </div>
-          
-          {/* Search Bar */}
+
+          {/* Search */}
           <div className="mb-4">
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -201,133 +218,70 @@ const StudentDashboard = () => {
                 placeholder="Buscar curso ou campus..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md bg-gray-50"
                 value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               />
             </div>
           </div>
-          
-          {/* Filter Dropdowns */}
+
+          {/* Anos */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ano Inicial 
-                <span className="text-blue-600 font-normal">({filters.anoInicial})</span>
+                Ano Inicial <span className="text-blue-600 font-normal">({filters.anoInicial})</span>
               </label>
-              <select 
+              <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filters.anoInicial}
-                onChange={(e) => setFilters({...filters, anoInicial: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, anoInicial: e.target.value })}
               >
-                {Array.from({length: 15}, (_, i) => 2010 + i).map(year => (
-                  <option key={year} value={year.toString()}>{year}</option>
+                {(options.anos.length ? options.anos : Array.from({ length: 15 }, (_, i) => (2010 + i).toString())).map((year) => (
+                  <option key={year} value={year}>{year}</option>
                 ))}
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ano Final 
-                <span className="text-blue-600 font-normal">({filters.anoFinal})</span>
+                Ano Final <span className="text-blue-600 font-normal">({filters.anoFinal})</span>
               </label>
-              <select 
+              <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filters.anoFinal}
-                onChange={(e) => setFilters({...filters, anoFinal: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, anoFinal: e.target.value })}
               >
-                {Array.from({length: 15}, (_, i) => 2010 + i).map(year => (
-                  <option key={year} value={year.toString()}>{year}</option>
+                {(options.anos.length ? options.anos : Array.from({ length: 15 }, (_, i) => (2010 + i).toString())).map((year) => (
+                  <option key={year} value={year}>{year}</option>
                 ))}
               </select>
             </div>
           </div>
 
+          {/* Demais filtros */}
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Curso</label>
-              <select 
+              <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filters.curso}
-                onChange={(e) => setFilters({...filters, curso: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, curso: e.target.value })}
               >
-                <option value="Todos">Todos</option>
-                <option value="Informática">Informática</option>
-                <option value="Engenharia">Engenharia</option>
-                <option value="Administração">Administração</option>
+                {(options.cursos || ['Todos']).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Campus</label>
-              <select 
+              <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filters.campus}
-                onChange={(e) => setFilters({...filters, campus: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, campus: e.target.value })}
               >
-                <option value="Todos">Todos</option>
-                <option value="Fortaleza">Fortaleza</option>
-                <option value="Maracanaú">Maracanaú</option>
-                <option value="Caucaia">Caucaia</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Modalidade</label>
-              <select 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={filters.modalidade}
-                onChange={(e) => setFilters({...filters, modalidade: e.target.value})}
-              >
-                <option value="Todos">Todos</option>
-                <option value="Presencial">Presencial</option>
-                <option value="EAD">EAD</option>
-                <option value="Híbrido">Híbrido</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
-              <select 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={filters.periodo}
-                onChange={(e) => setFilters({...filters, periodo: e.target.value})}
-              >
-                <option value="Todos">Todos</option>
-                <option value="Matutino">Matutino</option>
-                <option value="Vespertino">Vespertino</option>
-                <option value="Noturno">Noturno</option>
+                {(options.campi || ['Todos']).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Chart Type Selector */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Gráfico</label>
-            <div className="flex space-x-2 flex-wrap">
-              {[
-                { name: 'Barras', icon: BarChart3 },
-                { name: 'Pizza', icon: PieChart },
-                { name: 'Linha', icon: FileText },
-                { name: 'Área', icon: Layers },
-                { name: 'Dispersão', icon: Settings },
-                { name: 'Composto', icon: BarChart3 }
-              ].map((type) => (
-                <button
-                  key={type.name}
-                  onClick={() => setActiveChart(type.name)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeChart === type.name 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <type.icon className="w-4 h-4" />
-                  <span>{type.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Export Options */}
+          {/* Export */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
             <div className="flex items-center">
               <input type="checkbox" id="mostrar-comparacao" className="mr-2" />
@@ -336,34 +290,52 @@ const StudentDashboard = () => {
               </label>
             </div>
             <div className="flex space-x-3">
-              <button className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-200">
+              <a
+                href={csvUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-200"
+                title="Baixar CSV"
+              >
                 <Download className="w-4 h-4" />
                 <span className="text-sm font-medium">CSV</span>
-              </button>
-              <button className="flex items-center space-x-1 px-3 py-2 text-green-600 hover:bg-green-50 rounded-md border border-green-200">
+              </a>
+              <a
+                href={jsonUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center space-x-1 px-3 py-2 text-green-600 hover:bg-green-50 rounded-md border border-green-200"
+                title="Baixar JSON"
+              >
                 <FileText className="w-4 h-4" />
                 <span className="text-sm font-medium">JSON</span>
-              </button>
+              </a>
             </div>
           </div>
-          
+
           <p className="text-sm text-gray-500 mt-3">
             Filtros ativos: {activeFiltersCount === 0 ? 'Nenhum filtro aplicado' : `${activeFiltersCount} filtro(s) aplicado(s)`}
-            {filteredData.length > 0 && (
+            {series.length > 0 && (
               <span className="ml-2 text-green-600">
-                • {filteredData.reduce((sum, item) => sum + item.value, 0)} conclusões encontradas
+                • {series.reduce((sum, item) => sum + (item.value || 0), 0)} conclusões encontradas
               </span>
             )}
           </p>
+
+          {err && (
+            <p className="mt-3 text-sm text-red-600">
+              Erro ao carregar dados: {err}
+            </p>
+          )}
         </div>
 
-        {/* Stats Cards */}
+        {/* Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {dynamicStats.map((card, index) => (
             <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center mr-2"
                     style={{ backgroundColor: card.color }}
                   >
@@ -380,18 +352,20 @@ const StudentDashboard = () => {
           ))}
         </div>
 
-        {/* Chart Section */}
+        {/* Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
               Gráfico - Período: {filters.anoInicial} a {filters.anoFinal}
             </h3>
             <div className="text-sm text-gray-600">
-              {filteredData.length} ano{filteredData.length !== 1 ? 's' : ''} exibido{filteredData.length !== 1 ? 's' : ''}
+              {series.length} ano{series.length !== 1 ? 's' : ''} exibido{series.length !== 1 ? 's' : ''}
             </div>
           </div>
-          
-          {filteredData.length === 0 ? (
+
+          {loading ? (
+            <div className="h-80 flex items-center justify-center text-gray-500">Carregando…</div>
+          ) : series.length === 0 ? (
             <div className="h-80 flex items-center justify-center text-gray-500">
               <div className="text-center">
                 <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -402,104 +376,74 @@ const StudentDashboard = () => {
           ) : (
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart data={series} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="year" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: '#6b7280' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                    formatter={(value, name) => [`${value} conclusões`, 'Total']}
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                    formatter={(value) => [`${value} conclusões`, 'Total']}
                     labelFormatter={(label) => `Ano: ${label}`}
                   />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#10b981" 
-                    radius={[4, 4, 0, 0]}
-                    barSize={Math.min(40, Math.max(20, 400 / filteredData.length))}
-                  />
+                  <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={Math.min(40, Math.max(20, 400 / series.length))} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
         </div>
 
-        {/* Detailed Metrics - Agora baseadas nos dados filtrados */}
+        {/* Métricas detalhadas (com base na série) */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Métricas dos Dados Filtrados</h3>
-          
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Métricas dos Dados</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
               <div className="text-sm text-gray-600 mb-1">Total de Conclusões</div>
               <div className="text-xl font-bold mb-1 text-gray-900">
-                {filteredData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                {series.reduce((sum, item) => sum + (item.value || 0), 0).toLocaleString()}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Período Analisado</span>
-                <span className="text-sm font-medium text-green-600">
-                  {filteredData.length} ano{filteredData.length !== 1 ? 's' : ''}
-                </span>
+                <span className="text-sm font-medium text-green-600">{series.length} ano{series.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
-            
             <div>
               <div className="text-sm text-gray-600 mb-1">Média por Ano</div>
               <div className="text-xl font-bold mb-1 text-gray-900">
-                {filteredData.length > 0 ? 
-                  Math.round(filteredData.reduce((sum, item) => sum + item.value, 0) / filteredData.length) : 0
-                }
+                {series.length > 0 ? Math.round(series.reduce((s, it) => s + (it.value || 0), 0) / series.length) : 0}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Conclusões/Ano</span>
                 <span className="text-sm font-medium text-green-600">Média</span>
               </div>
             </div>
-            
             <div>
               <div className="text-sm text-gray-600 mb-1">Maior Ano</div>
               <div className="text-xl font-bold mb-1 text-gray-900">
-                {filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 }).year}
+                {series.reduce((max, it) => (it.value > max.value ? it : max), series[0] || { year: 'N/A', value: 0 }).year}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Pico</span>
                 <span className="text-sm font-medium text-green-600">
-                  {filteredData.reduce((max, item) => item.value > max.value ? item : max, filteredData[0] || { year: 'N/A', value: 0 }).value}
+                  {series.reduce((max, it) => (it.value > max.value ? it : max), series[0] || { year: 'N/A', value: 0 }).value}
                 </span>
               </div>
             </div>
-            
             <div>
               <div className="text-sm text-gray-600 mb-1">Crescimento</div>
               <div className="text-xl font-bold mb-1 text-gray-900">
-                {filteredData.length > 1 ? 
-                  `${((filteredData[filteredData.length - 1]?.value - filteredData[0]?.value) / filteredData[0]?.value * 100).toFixed(1)}%` 
-                  : 'N/A'
-                }
+                {series.length > 1
+                  ? `${(((series[series.length - 1].value || 0) - (series[0].value || 0)) / Math.max(1, (series[0].value || 0)) * 100).toFixed(1)}%`
+                  : 'N/A'}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Período Total</span>
-                <span className="text-sm font-medium text-green-600">
-                  {filteredData.length > 1 ? 'Crescimento' : 'N/A'}
-                </span>
+                <span className="text-sm font-medium text-green-600">{series.length > 1 ? 'Crescimento' : 'N/A'}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Copyright Notice */}
+        {/* Footer */}
         <div className="text-center mb-8">
           <p className="text-gray-500 text-sm">
             © 2025 Dashboard de Matrículas. Dados atualizados em tempo real.
@@ -507,7 +451,6 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-6">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h4 className="text-lg font-semibold text-gray-800 mb-2">
@@ -517,15 +460,9 @@ const StudentDashboard = () => {
           <p className="text-sm text-gray-600 mb-1">
             Rua Jorge Dumar, 1703 - Jardim América - Fortaleza-CE
           </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <strong>CEP:</strong> 60410-426
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <strong>E-mail:</strong> reitoria@ifce.edu.br
-          </p>
-          <p className="text-sm text-gray-600">
-            <strong>Telefone:</strong> (85) 3401 2300
-          </p>
+          <p className="text-sm text-gray-600 mb-1"><strong>CEP:</strong> 60410-426</p>
+          <p className="text-sm text-gray-600 mb-1"><strong>E-mail:</strong> reitoria@ifce.edu.br</p>
+          <p className="text-sm text-gray-600"><strong>Telefone:</strong> (85) 3401 2300</p>
         </div>
       </footer>
     </div>
